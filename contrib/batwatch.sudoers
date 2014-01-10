@@ -1,0 +1,11 @@
+## commands allowed to be run as root by batwatch event scripts
+##
+Cmnd_Alias BATWATCH_ROOT_COMMANDS = \
+   /usr/sbin/pm-hibernate, \
+   /usr/sbin/pm-suspend, \
+   /usr/sbin/pm-suspend-hybrid, \
+   /usr/bin/systemctl
+
+## allow group batwatch to run the commands listed above as root
+##
+%batwatch ALL = (root) NOPASSWD: EXEC: BATWATCH_ROOT_COMMANDS

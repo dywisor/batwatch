@@ -1,0 +1,25 @@
+Author:
+
+   André Erdmann <dywi at mailerd.de>
+
+
+Copyright:
+
+   Copyright (C) 2014 André Erdmann
+
+   Some ideas were taken from:
+
+   * UPower-Battery-Status-API, written by Zan Dobersek:
+
+     - src/upower-listener.h src/upower-listener.c
+
+     https://github.com/zdobersek/UPower-Battery-Status-API
+
+   * http://www.4pmp.com/2009/12/a-simple-daemon-in-c/
+
+     - src/daemonize.h, src/daemonize.c
+
+
+License:
+
+   batwatch is licensed under the GPL-2 or later, see LICENSE.GPL-2
