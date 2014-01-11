@@ -1,0 +1,119 @@
+#!/bin/sh
+#
+# batwatch - daemon start/stop script (sysvinit)
+#
+# Copyright (C) 2014 Andre Erdmann <dywi@mailerd.de>
+# Distributed under the terms of the GNU General Public License;
+# either version 2 of the License, or (at your option) any later version.
+#
+
+### BEGIN INIT INFO
+# Provides:            batwatchd
+# Required-Start:      $local_fs $syslog dbus
+# Required-Stop:       $local_fs $syslog dbus
+# Should-Start:        $remote_fs
+# Should-Stop:         $remote_fs
+# Default-Start:       2 3 4 5
+# Default-Stop:        0 1 6
+# Short-Description:   start/stop batwatchd
+# Description:         control the batwatch daemon
+### END INIT INFO
+
+: ${BATWACH_PIDFILE:=/run/BATWACH.pid}
+: ${BATWACH_BINARY:=/usr/bin/batwatch}
+: ${BATWACH_RUNDIR:=/}
+: ${BATWACH_OPTS=}
+: ${BATWACH_USER=}
+: ${BATWACH_GROUP=}
+
+: ${MY_SSD_OPTS=}
+if [ -n "${BATWACH_USER}" ]; then
+   MY_SSD_OPTS="${MY_SSD_OPTS-} -u ${BATWACH_USER}"
+fi
+
+if [ -n "${BATWACH_GROUP}" ]; then
+   MY_SSD_OPTS="${MY_SSD_OPTS-} -g ${BATWACH_GROUP}"
+fi
+
+do_start() {
+   start-stop-daemon --start --exec "${BATWACH_BINARY}" \
+      --pidfile "${BATWACH_PIDFILE}" ${MY_SSD_OPTS-} -- \
+      -p "${BATWACH_PIDFILE}" -C "${BATWACH_RUNDIR}" \
+      ${BATWACH_OPTS-}
+)
+
+do_stop() {
+   start-stop-daemon --stop --exec "${BATWACH_BINARY}" \
+      --pidfile "${BATWACH_PIDFILE}" ${MY_SSD_OPTS-} "$@"
+)
+
+do_reload() {
+   do_stop --signalHUP
+}
+
+get_status() {
+   do_stop --test--quiet
+}
+
+if [ ! -x "${BATWACH_BINARY}" ]; then
+   log_failure_message "${BATWACH_BINARY} not found."
+   exit 5
+fi
+
+case "${1-}" in
+   'start')
+      log_action_msg "Starting batwatch"
+      if do_start; then
+         log_success_msg "Started batwatch."
+         exit 0
+      else
+         log_failure_msg "Failed to start batwatch."
+         exit 1
+      fi
+   ;;
+   'stop')
+      log_action_msg "Stopping batwatch"
+      if do_stop; then
+         log_success_msg "Stopped batwatch."
+         exit 0
+      else
+         log_failure_msg "Failed to stop batwatch."
+      fi
+   ;;
+   'restart')
+      log_action_msg "Restarting batwatch"
+      if ! do_stop; then
+         log_warning_msg "Failed to stop batwatch."
+      fi
+
+      if do_start; then
+         log_success_msg "Restarted batwatch."
+         exit 0
+      else
+         log_failure_msg "Failed to restart batwatch."
+      fi
+   ;;
+   'status')
+      if get_status; then
+         log_daemon_msg "batwatch is running."
+         exit 0
+      else
+         log_daemon_msg "batwatch is not running."
+         exit 1
+      fi
+   ;;
+   'reload'|'force-reload')
+      log_action_msg "Reloading batwatch"
+      if do_reload; then
+         log_success_msg "Reloaded batwatch."
+         exit 0
+      else
+         log_failure_msg "Failed to reload batwatch."
+         exit 1
+      fi
+   ;;
+   *)
+      echo "Usage: ${0} start|stop|restart|status|reload|force-reload"
+      exit 2
+   ;;
+esac

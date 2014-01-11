@@ -1,0 +1,41 @@
+#!/sbin/runscript
+#
+# @@NAME@@ - daemon start/stop script (openrc)
+#
+# Copyright (C) 2014 Andre Erdmann <dywi@mailerd.de>
+# Distributed under the terms of the GNU General Public License;
+# either version 2 of the License, or (at your option) any later version.
+#
+
+extra_started_commands="reload"
+description_reload="forcefully update batteries"
+
+@@VARS@@
+
+depend() {
+   use logger
+   need dbus dev localmount
+   after netmount nfsmount
+}
+
+@@STOP@@() {
+   @@STOP_CODE@@
+}
+
+start() {
+   ebegin "Starting ${RC_SVCNAME}"
+   @@START_CODE@@
+   eend ${?}
+}
+
+stop() {
+   ebegin "Stopping ${RC_SVCNAME}"
+   @@STOP@@
+   eend ${?}
+}
+
+reload() {
+   ebegin "Reloading ${RC_SVNAME}"
+   @@STOP@@ @@RELOAD_ARGS@@
+   eend ${?}
+}

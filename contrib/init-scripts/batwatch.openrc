@@ -1,0 +1,59 @@
+#!/sbin/runscript
+#
+# batwatch - daemon start/stop script (openrc)
+#
+# Copyright (C) 2014 Andre Erdmann <dywi@mailerd.de>
+# Distributed under the terms of the GNU General Public License;
+# either version 2 of the License, or (at your option) any later version.
+#
+
+extra_started_commands="reload"
+description_reload="forcefully update batteries"
+
+: ${BATWACH_PIDFILE:=/run/BATWACH.pid}
+: ${BATWACH_BINARY:=/usr/bin/batwatch}
+: ${BATWACH_RUNDIR:=/}
+: ${BATWACH_OPTS=}
+: ${BATWACH_USER=}
+: ${BATWACH_GROUP=}
+
+: ${MY_SSD_OPTS=}
+if [ -n "${BATWACH_USER}" ]; then
+   MY_SSD_OPTS="${MY_SSD_OPTS-} -u ${BATWACH_USER}"
+fi
+
+if [ -n "${BATWACH_GROUP}" ]; then
+   MY_SSD_OPTS="${MY_SSD_OPTS-} -g ${BATWACH_GROUP}"
+fi
+
+depend() {
+   use logger
+   need dbus dev localmount
+   after netmount nfsmount
+}
+
+do_stop() {
+   start-stop-daemon --stop --exec "${BATWACH_BINARY}" \
+      --pidfile "${BATWACH_PIDFILE}" ${MY_SSD_OPTS-} "$@"
+}
+
+start() {
+   ebegin "Starting ${RC_SVCNAME}"
+   start-stop-daemon --start --exec "${BATWACH_BINARY}" \
+      --pidfile "${BATWACH_PIDFILE}" ${MY_SSD_OPTS-} -- \
+      -p "${BATWACH_PIDFILE}" -C "${BATWACH_RUNDIR}" \
+      ${BATWACH_OPTS-}
+   eend ${?}
+}
+
+stop() {
+   ebegin "Stopping ${RC_SVCNAME}"
+   do_stop
+   eend ${?}
+}
+
+reload() {
+   ebegin "Reloading ${RC_SVNAME}"
+   do_stop --signalHUP
+   eend ${?}
+}

@@ -1,0 +1,87 @@
+#!/bin/sh
+#
+# @@NAME@@ - daemon start/stop script (sysvinit)
+#
+# Copyright (C) 2014 Andre Erdmann <dywi@mailerd.de>
+# Distributed under the terms of the GNU General Public License;
+# either version 2 of the License, or (at your option) any later version.
+#
+
+### BEGIN INIT INFO
+# Provides:            @@NAME@@d
+# Required-Start:      $local_fs $syslog dbus
+# Required-Stop:       $local_fs $syslog dbus
+# Should-Start:        $remote_fs
+# Should-Stop:         $remote_fs
+# Default-Start:       2 3 4 5
+# Default-Stop:        0 1 6
+# Short-Description:   start/stop @@NAME@@d
+# Description:         control the @@NAME@@ daemon
+### END INIT INFO
+
+@@VARS@@
+
+@@FUNCS@@
+
+if @@CHECK_BINARY_MISSING@@; then
+   log_failure_message "@@BINARY@@ not found."
+   exit 5
+fi
+
+case "${1-}" in
+   'start')
+      log_action_msg "Starting @@SVCNAME@@"
+      if @@START@@; then
+         log_success_msg "Started @@SVCNAME@@."
+         exit 0
+      else
+         log_failure_msg "Failed to start @@SVCNAME@@."
+         exit 1
+      fi
+   ;;
+   'stop')
+      log_action_msg "Stopping @@SVCNAME@@"
+      if @@STOP@@; then
+         log_success_msg "Stopped @@SVCNAME@@."
+         exit 0
+      else
+         log_failure_msg "Failed to stop @@SVCNAME@@."
+      fi
+   ;;
+   'restart')
+      log_action_msg "Restarting @@SVCNAME@@"
+      if ! @@STOP@@; then
+         log_warning_msg "Failed to stop @@SVCNAME@@."
+      fi
+
+      if @@START@@; then
+         log_success_msg "Restarted @@SVCNAME@@."
+         exit 0
+      else
+         log_failure_msg "Failed to restart @@SVCNAME@@."
+      fi
+   ;;
+   'status')
+      if @@GET_STATUS@@; then
+         log_daemon_msg "@@SVCNAME@@ is running."
+         exit 0
+      else
+         log_daemon_msg "@@SVCNAME@@ is not running."
+         exit 1
+      fi
+   ;;
+   'reload'|'force-reload')
+      log_action_msg "Reloading @@SVCNAME@@"
+      if @@RELOAD@@; then
+         log_success_msg "Reloaded @@SVCNAME@@."
+         exit 0
+      else
+         log_failure_msg "Failed to reload @@SVCNAME@@."
+         exit 1
+      fi
+   ;;
+   *)
+      echo "Usage: ${0} start|stop|restart|status|reload|force-reload"
+      exit 2
+   ;;
+esac
