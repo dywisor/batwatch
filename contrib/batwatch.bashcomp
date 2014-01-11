@@ -1,0 +1,82 @@
+# bash completion for batwatch
+
+_batwatch_comp() {
+   local -i i
+   local cur prev
+
+   COMPREPLY=()
+   _get_comp_words_by_ref cur prev
+   _split_longopt || true
+
+   local LONGOPTS=(
+      '--threshold' '--exe' '--battery' '--no-args'
+      '--fallback-min' '--help' '--version'
+      '--no-fork' '--stdout' '--stderr' '--rundir' '--pidfile'
+   )
+
+   local SHORTOPTS=(
+      '-T' '-x' '-b' '-0'
+      '-F' '-h' '-V'
+      '-N' '-1' '-2' '-C' '-p'
+   )
+
+   #local POS_ARGS=()
+
+   case "${prev}" in
+      '-T'|'--threshold'|'-F'|'--fallback-min')
+         # percentage: int or floating point number
+         local _NUMBERS=( {1..100..1} )
+         #more annoying: _NUMBERS=( 0.{3,5,7} {1..99..1}.{0,3,5,7} 100.0 )
+         COMPREPLY+=( $( compgen -W "${_NUMBERS[*]}" -- "${cur}" ) )
+      ;;
+
+      '-x'|'--exe')
+         # program name or (executable) file path
+         _filedir
+         COMPREPLY+=( $( compgen -c -- "${cur}" ) )
+      ;;
+
+      '-b'|'--battery')
+         # battery name expected
+         # * upower -e
+         # * /sys/class/power_supply/BAT*, ...
+         #
+         local _DIRNAMES=()
+         local d
+         for d in \
+            /sys/class/power_supply/BAT* \
+            /sys/devices/platform/smapi/BAT*
+         do
+            [[ ! -d "${d}" ]] || _DIRNAMES+=( "${d##*/}" )
+         done
+
+         COMPREPLY=( $( compgen -W "${_DIRNAMES[*]}" -- "${cur}" ) )
+      ;;
+
+      '-1'|'--stdout'|'-2'|'--stderr'|'-p'|'--pidfile')
+         # file path
+         _filedir
+      ;;
+
+      '-C'|'--rundir')
+         # dir path
+         _filedir -d
+      ;;
+
+      *)
+         case "${cur}" in
+            --*)
+               COMPREPLY=( $( compgen -W "${LONGOPTS[*]}" -- "${cur}" ) )
+            ;;
+            #-*)
+            *)
+               COMPREPLY=(
+                  $( compgen -W "${LONGOPTS[*]} ${SHORTOPTS[*]}" -- "${cur}" )
+               )
+            ;;
+         esac
+      ;;
+   esac
+}
+
+complete -F _batwatch_comp batwatch
