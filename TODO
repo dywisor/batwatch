@@ -3,6 +3,8 @@ Notes/Ideas/TODO, in no particular order:
 - non-daemon mode behaves differently (no chdir, ...)
 - see TODO note regarding state changes in data_types.h
 - --threshold-low for scripts, this allows to handle events like "battery full"
+- --single-shot: exit after any/all scripts have been run once
+- pass TimeToEmpty/TimeToFull to scripts
 - detect suspend/resume etc. (--inhibit,-I)
    -- dbus, polkit/consolekit/logind?
    -> http://lists.freedesktop.org/archives/devkit-devel/2013-January/001339.html

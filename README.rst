@@ -43,9 +43,20 @@ For installing `batwatch`, run::
    # install batwatch to its default location (/usr/bin/batwatch)
    $ make install
 
-   # install batwatch to /home/user/bin/batwatch
-   $ make DESTDIR=/home/user DESTPREFIX=/bin install
+   # install batwatch to /home/user, binaries to /home/user/bin
+   $ make DESTDIR=/home/user BIN=/home/user/bin install
 
+   # install bash-completions, sudo config
+   $ make install-contrib
+
+   ## install init script(s)
+   # OpenRC
+   $ make install-openrc
+   # SysVinit
+   $ make install-sysvinit
+
+   # as one-liner (example, doesn't work with /bin/dash)
+   $ make DESTDIR=/ BASHCOMPDIR=/usr/share/bash-completions install{,-contrib,-openrc}
 
 
 Running it
@@ -147,7 +158,7 @@ privileges, which can be achieved with *sudo* (and others):
    Make sure that */etc/sudoers* has a ``#includedir /etc/sudoers.d``
    directive.
 
-#. **Or** add the following text to the end of */etc/sudoers* (``visudo``).
+#. **Or** add the content of *contrib/batwatch.sudoers* to the end of */etc/sudoers* (``visudo``)
 
    .. include:: contrib/batwatch.sudoers
       :literal:
