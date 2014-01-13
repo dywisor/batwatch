@@ -115,8 +115,13 @@ endif
 ifneq ($(X_DASH),)
 	$(X_DASH) -n $@.shlib_tmp
 endif
+	chmod +x -- $@.shlib_tmp
 	mv -f -- $@.shlib_tmp $@
 
+
+$(DISTDIR)/%.sh.bz2: $(CURDIR)/scripts/%.sh
+	bzip2 -vc -- $< > $@.make_tmp
+	mv -f -- $@.make_tmp $@
 
 
 $(DISTDIR):
@@ -132,7 +137,7 @@ PHONY += dist
 dist: regen | $(DISTDIR)
 	$(eval MY_$@_VER := $(call f_getver))
 	git archive --worktree-attributes --format=tar HEAD \
-		--prefix=$(BATWATCH_NAME)-$(MY_$@_VER) \
+		--prefix=$(BATWATCH_NAME)-$(MY_$@_VER)/ \
 		> $(DISTDIR)/$(BATWATCH_NAME)-$(MY_$@_VER).tar
 
 	gzip -c $(DISTDIR)/$(BATWATCH_NAME)-$(MY_$@_VER).tar \
@@ -159,6 +164,7 @@ PHONY += clean
 clean:
 	-rm -f -- $(COMMON_OBJECTS) $(BATWATCH_OBJECTS) $(CURDIR)/$(BATWATCH_NAME)
 	-rm -f -- $(CURDIR)/scripts/*.shlib_tmp
+	-rm -f -- $(DISTDIR)/*.make_tmp
 	-test ! -d $(O) || rmdir $(O)
 
 
@@ -169,6 +175,7 @@ genclean: \
 
 	rm -f -- $(addprefix $(INITSCRIPT_DIR)/$(BATWATCH_NAME).,init openrc)
 	rm -f -- $(CURDIR)/scripts/instagitlet.sh
+	rm -f -- $(DISTDIR)/instagitlet.sh.bz2
 
 
 PHONY += distclean
@@ -240,7 +247,7 @@ stat: $(BATWATCH_NAME)
 
 
 PHONY += gen-instagit
-gen-instagit: $(CURDIR)/scripts/instagitlet.sh
+gen-instagit: $(CURDIR)/scripts/instagitlet.sh $(DISTDIR)/instagitlet.sh.bz2
 
 
 PHONY += _init-scripts__shell

@@ -13,7 +13,8 @@
 *.sw[a-z]
 *.bak*
 
-dist/
+/dist/*
+!/dist/*.sh.bz2
 release/
 build/
 
@@ -27,3 +28,4 @@ local/
 
 /batwatch
 /batwatchd
+/.batwatch
