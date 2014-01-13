@@ -17,7 +17,7 @@
 #  --offline        -- don't update/clone the git repo
 #  --no-deps        -- don't check for build dependencies
 #  --no-compile     -- don't build batwatch
-#  --no-clean       -- don't run 'make clean' before building
+#  --clean          -- clean up before building
 #  --no-run         -- don't run batwatch
 #  -X, --just-run   -- same as --no-src --no-deps --no-compile
 #  --src-dir <dir>  -- set src directory
@@ -55,7 +55,30 @@ sys/types.h
 unistd.h
 "
 
+#@section module_init
+
+__F_DIE_ORIGINAL="${__F_DIE:-die__minimal}"
+__F_DIE="main__do_die"
+
+
 #@section func
+
+# int is_batwatch_src_root ( dirpath )
+#
+is_batwatch_src_root() {
+   if [ -e "${1}/.${PN}" ]; then
+      return 0
+   elif \
+      [ -d "${1}/.git" ] && \
+      [ -f "${1}/event-scripts/dummy.sh" ] && \
+      grep -sqIi -- "installing..*${PN}" "${1}/README.rst" && \
+      [ -f "${1}/Makefile" ]
+   then
+      return 0
+   fi
+
+   return 1
+}
 
 # int guess_git_dir ( **SCRIPT_DIR, **v0! )
 #
@@ -77,20 +100,7 @@ guess_git_dir() {
       ;;
    esac
 
-   if [ -e "${pdir}/.${PN}" ]; then
-      v0="${pdir}"
-      return 0
-   elif \
-      [ -d "${pdir}/.git" ] && \
-      [ -f "${pdir}/event-scripts/dummy.sh" ] && \
-      grep -sqIi -- "installing..*${PN}" "${pdir}/README.rst" && \
-      [ -f "${pdir}/Makefile" ]
-   then
-      v0="${pdir}"
-      return 0
-   fi
-
-   return 1
+   is_batwatch_src_root "${pdir}" && v0="${pdir}"
 }
 
 # int locate_file_in_path_var (
@@ -162,12 +172,40 @@ check_for_c_headers() {
    return 0
 }
 
+# @private @noreturn void main__do_die ( [message], [code] )
+#
+#  Very important function. Deals with uninformative die() statements.
+#
+main__do_die() {
+   local __F_DIE="${__F_DIE_ORIGINAL:?}"
+   if [ -n "${1-}" ]; then
+      die "${1}" "${2-}"
+   else
+      # messages straight from c-intercal
+      local msg=
+      ## max(RANDOM) < 2**15 (or <= 2**15?)
+      case "${RANDOM:-X}" in
+         9*) msg="YOU CAN'T HAVE EVERYTHING, WHERE WOULD YOU PUT IT?" ;;
+         8*) msg="IT CAME FROM BEYOND SPACE" ;;
+         7*) msg="NOTHING VENTURED, NOTHING GAINED" ;;
+         6*) msg="DON'T BYTE OFF MORE THAN YOU CAN CHEW" ;;
+         5*) msg="I WASN'T PLANNING TO GO THERE ANYWAY" ;;
+         4*) msg="SAYING 'ABRACADABRA' WITHOUT A MAGIC WAND WON'T DO YOU ANY GOOD" ;;
+         3*) msg="PROGRAM FELL OFF THE EDGE" ;;
+         2*) msg="PROGRAM HAS DISAPPEARED INTO THE BLACK LAGOON" ;;
+         1*) msg="A SOURCE IS A SOURCE, OF COURSE, OF COURSE" ;;
+         *)  msg=" THE NEXT STACK RUPTURES. ALL DIE. OH, THE EMBARRASSMENT!" ;;
+      esac
+      die "${msg}" "${2-}"
+   fi
+}
+
 #@section __main__
 
 want_depcheck=y
 want_src=y
 want_compile=y
-want_clean_compile=y
+want_clean_compile=
 want_rdepcheck=y
 want_run=y
 my_git_src_dir=
@@ -198,8 +236,8 @@ while [ ${#} -gt 0 ]; do
       '--no-compile')
          want_compile=
       ;;
-      '--no-clean')
-         want_clean_compile=
+      '--clean')
+         want_clean_compile=y
       ;;
       '--no-run')
          want_run=
@@ -231,7 +269,7 @@ Options:
   --offline        -- don't update/clone the git repo
   --no-deps        -- don't check for build dependencies
   --no-compile     -- don't build ${PN}
-  --no-clean       -- don't run 'make clean' before building
+  --clean          -- clean up before building
   --no-run         -- don't run ${PN}
   -X, --just-run   -- same as --no-src --no-deps --no-compile
   --src-dir <dir>  -- set src directory
@@ -367,6 +405,11 @@ if [ "${want_src}" ]; then
       autodie touch "${GIT_APP_REAL_ROOT}/.${PN}"
    fi
    echo
+fi
+
+if ! is_batwatch_src_root "${GIT_APP_REAL_ROOT}"; then
+   eerror "${GIT_APP_REAL_ROOT} is not ${PN}'s src dir" '!!!'
+   die
 fi
 
 
