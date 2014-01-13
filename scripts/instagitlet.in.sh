@@ -200,6 +200,8 @@ main__do_die() {
    fi
 }
 
+warn_inhibited_by_dry_run() { ewarn "${1}" '(dry-run)'; }
+
 #@section __main__
 
 want_depcheck=y
@@ -407,9 +409,21 @@ if [ "${want_src}" ]; then
    echo
 fi
 
-if ! is_batwatch_src_root "${GIT_APP_REAL_ROOT}"; then
-   eerror "${GIT_APP_REAL_ROOT} is not ${PN}'s src dir" '!!!'
-   die
+if is_batwatch_src_root "${GIT_APP_REAL_ROOT}"; then
+   SRC_DIR_ERROR= || die "\$SRC_DIR_ERROR readonly."
+else
+   if __faking__; then
+      if [ -d "${GIT_APP_REAL_ROOT}" ]; then
+         SRC_DIR_ERROR="invalid"
+         eerror "${GIT_APP_REAL_ROOT} is not ${PN}'s src dir" '!!!'
+         echo 1>&2
+      else
+         SRC_DIR_ERROR="nonexistent"
+      fi
+   else
+      eerror "${GIT_APP_REAL_ROOT} is not ${PN}'s src dir" '!!!'
+      die
+   fi
 fi
 
 
@@ -417,15 +431,19 @@ fi
 if [ "${want_compile}" ]; then
    einfo "build" ">>>"
    instagitlet_chdir "${GIT_APP_REAL_ROOT}" || die
+
    if __faking__; then
       if [ -n "${want_clean_compile}" ]; then
-         instagitlet_fakecmd make make -n ${MAKEOPTS-} -j1 clean
+         instagitlet_fakecmd make make ${MAKEOPTS-} -n -j1 clean
       fi
       instagitlet_fakecmd make make -n ${MAKEOPTS-} "${PN}"
-      if [ -n "${FAKE_MODE_CHDIR_FAIL-}" ]; then
-         ewarn "skipping make command - chdir failed." '(dry-run)'
+      if [ -n "${SRC_DIR_ERROR}" ]; then
+         warn_inhibited_by_dry_run "skipping make command - src dir ${SRC_DIR_ERROR}."
+      elif [ -n "${FAKE_MODE_CHDIR_FAIL-}" ]; then
+         warn_inhibited_by_dry_run "skipping make command chdir failed."
       else
-         make ${MAKEOPTS-} -n "${PN}" || eerror "make returned ${?}." "!!!"
+         make ${MAKEOPTS-} -n -j1 clean || eerror "make returned ${?}." '!!!'
+         make ${MAKEOPTS-} -n "${PN}" || eerror "make returned ${?}." '!!!'
       fi
    else
       if [ -n "${want_clean_compile}" ]; then
@@ -449,13 +467,26 @@ if [ "${want_run}" ]; then
       fi
    fi
 
-   # chdir not necessary here
+   einfo "Enumerating upower devices (upower -e)"
+   if __faking__; then
+      instagitlet_fakecmd cmd ${X_UPOWER} -e
+      echo
+   elif ${X_UPOWER} -e; then
+      einfo "ok"
+      echo
+   else
+      ewarn "failed to enumerate upower devices, continuing anyway." '!!!'
+      echo 1>&2
+   fi
+
+   # chdir to GIT_APP_REAL_ROOT so that relative --exe(s) work properly
    instagitlet_chdir "${GIT_APP_REAL_ROOT}" || die
 
    print_pkill_message=YES
    for arg; do
       case "${arg}" in
-         '--pidfile'|'-p'|'-N'|'--no-fork')
+         '--pidfile'|'-p'|'-N'|'--no-fork'|\
+         '--help'|'-h'|'--version'|'-V')
             print_pkill_message=
             break
          ;;
@@ -463,7 +494,7 @@ if [ "${want_run}" ]; then
    done
 
    if [ -n "${print_pkill_message}" ]; then
-      ewarn "Neither --pidfile nor --no-fork specified" '!!!'
+      ewarn "Neither --pidfile (-p) nor --no-fork (-N) specified" '!!!'
       ft="for terminating ${PN}." || die "\$ft readonly."
 
       if qwhich pkill; then
