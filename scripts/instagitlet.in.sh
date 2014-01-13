@@ -238,6 +238,11 @@ fi
 if [ "${want_src}" ]; then
    einfo "src" ">>>"
    instagitlet_get_src
+   if __faking__; then
+      instagitlet_fakecmd touch touch "${GIT_APP_REAL_ROOT}/.${PN}"
+   elif [ ! -e "${GIT_APP_REAL_ROOT}/.${PN}" ]; then
+      autodie touch "${GIT_APP_REAL_ROOT}/.${PN}"
+   fi
    echo
 fi
 
@@ -305,6 +310,6 @@ if [ "${want_run}" ]; then
       instagitlet_fakecmd "cmd" "$@"
    else
       veinfo "${GIT_APP_REAL_ROOT}/${PN} $*" "(cmd)"
-      "${GIT_APP_REAL_ROOT}/${PN}" "$@"
+      "$@"
    fi
 fi
