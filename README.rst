@@ -13,9 +13,69 @@ It is able to handle multiple batteries/scripts/thresholds.
 Does not execute a program more than once unless a battery leaves the
 threshold range (**TODO**: or <some state changes> while in crit range).
 
+---------------
+ instagit mode
+---------------
+
+For quickly testing *batwatch*, an *instant git applet* is available, which
+is a script that takes care of everything (downloads/updates the git repo,
+checks for dependencies, builds and runs batwatch). However, it does not
+install any of the `dependencies`_ (highly distribution-specific).
+
+For the impatient
+   Run the following commands::
+
+      cd ${TMPDIR:-/tmp}
+      wget "https://github.com/dywisor/batwatch/blob/master/dist/instagitlet.sh.bz2?raw=true" -O- | bzip2 -dc > ./bw-instagit.sh
+      chmod u+x ./bw-instagit.sh
+      ./bw-instagit.sh -n && ./bw-instagit.sh -- -N -T 97 -x ./event-scripts/dummy.sh
+
+More detailed
+   (Optionally) Change the working directory to some temporary location::
+
+      $ cd ${TMPDIR:-/tmp}
+
+   Download the (compressed) instagitlet.sh script, unpack it and make it
+   executable::
+
+      $ wget "https://github.com/dywisor/batwatch/blob/master/dist/instagitlet.sh.bz2?raw=true" -O- | bzip2 -dc > ./bw-instagit.sh
+      $ chmod u+x ./bw-instagit.sh
+
+   To see what the script would do, run::
+
+      $ ./bw-instagit.sh -n
+
+   To actually download/build/run *batwatch*::
+
+      $ ./bw-instagit.sh -- -N -T 97 -x ./event-scripts/dummy.sh
+
+   This starts *batwatch* in non-daemon mode with the dummy *event script*,
+   which gets activated if *any* of your batteries is discharging and below
+   97%.
+
+   Once the *batwatch* git repo has been cloned, you can delete
+   ``./bw-instagit.sh`` and use ``~/git-src/scripts/instagitlet.sh`` instead.
+
+   .. code:: sh
+
+      $ rm ./bw-instagit.sh
+
+
+   To get rid of *batwatch*, run::
+
+      $ rm -rf ~/git-src/batwatch
+
+
+I don't want these colors!
+   Simply pass ``--no-color`` to the instagitlet script (before the ``--``)
+   or run ``export NO_COLOR=y``.
+
+
 
 Building and Installing batwatch
 ================================
+
+.. _Dependencies:
 
 Dependencies:
 
