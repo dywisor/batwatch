@@ -6,14 +6,6 @@ readonly X_SUDO="/usr/bin/sudo -n -u root --"
 readonly X_SYSTEMCTL="systemctl"
 readonly X_PM_PREFIX="/usr/sbin/pm-"
 
-#readonly BATTERY="${1-}"
-#readonly BATTERY_SYSFS="${2-}"
-#readonly BATTERY_PERC="${3-}"
-readonly FALLBACK_BATTERY="${4-}"
-#readonly FALLBACK_BATTERY_SYSFS="${5-}"
-readonly FALLBACK_BATTERY_PERC="${6-}"
-
-
 dolog() {
    logger -t batwatch -p ${2:-debug} "${SCRIPT_NAME}: ${1}"
 }
@@ -26,7 +18,10 @@ die() {
 
 is_systemd_booted() { [ -d /run/systemd/system ]; }
 
-have_fallback_battery() { [ -n "${FALLBACK_BATTERY_PERC-}" ]; }
+have_fallback_battery() {
+   [ -n "${FALLBACK_BATTERY_STATE-}" ]
+}
+
 abort_if_fallback_battery() {
    if have_fallback_battery; then
       dolog "${1:-${SCRIPT_NAME}} inhibited by fallback battery ${FALLBACK_BATTERY:-X}"
@@ -73,11 +68,10 @@ run_power_command() {
 
 
 
-dolog "${*:-<no args>}" debug
+dolog "started" debug
 
-if [ -z "${1+SET}" ] || [ -z "${2+SET}" ] || [ -z "${3+SET}" ]; then
-   die "no battery given." 64
-fi
+[ -n "${BATTERY-}" ] || die "no battery given." 64
+
 
 case "${SCRIPT_MODE}" in
    'suspend')
