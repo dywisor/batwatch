@@ -17,6 +17,7 @@
 #  --offline        -- don't update/clone the git repo
 #  --no-deps        -- don't check for build dependencies
 #  --no-compile     -- don't build batwatch
+#  --no-clean       -- don't run 'make clean' before building
 #  --no-run         -- don't run batwatch
 #  -X, --just-run   -- same as --no-src --no-deps --no-compile
 #  --src-dir <dir>  -- set src directory
@@ -166,6 +167,7 @@ check_for_c_headers() {
 want_depcheck=y
 want_src=y
 want_compile=y
+want_clean_compile=y
 want_rdepcheck=y
 want_run=y
 my_git_src_dir=
@@ -195,6 +197,9 @@ while [ ${#} -gt 0 ]; do
       ;;
       '--no-compile')
          want_compile=
+      ;;
+      '--no-clean')
+         want_clean_compile=
       ;;
       '--no-run')
          want_run=
@@ -226,6 +231,7 @@ Options:
   --offline        -- don't update/clone the git repo
   --no-deps        -- don't check for build dependencies
   --no-compile     -- don't build ${PN}
+  --no-clean       -- don't run 'make clean' before building
   --no-run         -- don't run ${PN}
   -X, --just-run   -- same as --no-src --no-deps --no-compile
   --src-dir <dir>  -- set src directory
@@ -369,6 +375,9 @@ if [ "${want_compile}" ]; then
    einfo "build" ">>>"
    instagitlet_chdir "${GIT_APP_REAL_ROOT}" || die
    if __faking__; then
+      if [ -n "${want_clean_compile}" ]; then
+         instagitlet_fakecmd make make -n ${MAKEOPTS-} -j1 clean
+      fi
       instagitlet_fakecmd make make -n ${MAKEOPTS-} "${PN}"
       if [ -n "${FAKE_MODE_CHDIR_FAIL-}" ]; then
          ewarn "skipping make command - chdir failed." '(dry-run)'
@@ -376,6 +385,9 @@ if [ "${want_compile}" ]; then
          make ${MAKEOPTS-} -n "${PN}" || eerror "make returned ${?}." "!!!"
       fi
    else
+      if [ -n "${want_clean_compile}" ]; then
+         autodie make ${MAKEOPTS-} -j1 clean
+      fi
       autodie make ${MAKEOPTS-} "${PN}"
    fi
    echo
