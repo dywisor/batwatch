@@ -58,11 +58,11 @@ print_FUNCS() {
 cat << EOF
 ${1}@@START@@() {
 $(print_START_CODE "${s}")
-${1})
+${1}}
 
 ${1}@@STOP@@() {
 $(print_STOP_CODE "${s}")
-${1})
+${1}}
 
 ${1}@@RELOAD@@() {
 ${s}@@STOP@@ @@RELOAD_ARGS@@

@@ -40,12 +40,12 @@ do_start() {
       --pidfile "${BATWACH_PIDFILE}" ${MY_SSD_OPTS-} -- \
       -p "${BATWACH_PIDFILE}" -C "${BATWACH_RUNDIR}" \
       ${BATWACH_OPTS-}
-)
+}
 
 do_stop() {
    start-stop-daemon --stop --exec "${BATWACH_BINARY}" \
       --pidfile "${BATWACH_PIDFILE}" ${MY_SSD_OPTS-} "$@"
-)
+}
 
 do_reload() {
    do_stop --signalHUP
