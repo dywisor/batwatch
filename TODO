@@ -1,30 +1,31 @@
 Notes/Ideas/TODO, in no particular order:
 
-- non-daemon mode behaves differently (no chdir, ...)
-- see TODO note regarding state changes in data_types.h
-- --threshold-low for scripts, this allows to handle events like "battery full"
-- --single-shot: exit after any/all scripts have been run once
-- pass TimeToEmpty/TimeToFull to scripts
-- detect suspend/resume etc. (--inhibit,-I)
-   -- dbus, polkit/consolekit/logind?
-   -> http://lists.freedesktop.org/archives/devkit-devel/2013-January/001339.html
-   -> http://pkgs.fedoraproject.org/cgit/xfce4-power-manager.git/tree/xfce4-power-manager-1.2.0-systemd-suspend-hibernate.patch
+[ ] non-daemon mode behaves differently (no chdir, ...)
+[ ] see TODO note regarding state changes in data_types.h
+[ ] --threshold-low for scripts, this allows to handle events like "battery full"
+[ ] --single-shot: exit after any/all scripts have been run once
+[?] pass TimeToEmpty/TimeToFull to scripts
+[x] pass percentage, remaining running time,... as env vars
+[ ] detect suspend/resume etc. (--inhibit,-I)
+     -- dbus, polkit/consolekit/logind?
+     -> http://lists.freedesktop.org/archives/devkit-devel/2013-January/001339.html
+     -> http://pkgs.fedoraproject.org/cgit/xfce4-power-manager.git/tree/xfce4-power-manager-1.2.0-systemd-suspend-hibernate.patch
 
    Maybe just detect system resume.
 
-- optionally reset script status to "not run" when a timer expires,
-   for notification scripts etc.
-- [nice-to-have] built-in actions, @action
-- fallback battery code is purely theoretical so far...
-- battery add/remove handling is TODO, see upower-listener.c
-- logging...
-- [options marked as TODO in README.rst]
-- make daemon code option (#ifdef ENABLE_DAEMON)
-- improved IPC (socket,...?)
-- init script generic, openrc
-- bashcomp
-- maybe (optionally) add polkit support so that pm-suspend etc. can be run
-  directly without running the daemon as root
-  // or use euid,egid or CAP_SETUID,CAP_SETGID
-  // recommending sudo for now
-- some sort of config/rule file(s)
+[ ] optionally reset script status to "not run" when a timer expires,
+    for notification scripts etc. (-> periodic scripts)
+[ ] [nice-to-have] built-in actions, @action
+[_] fallback battery code is purely theoretical so far...
+[ ] battery add/remove handling is TODO, see upower-listener.c
+[ ] logging...
+[ ] [options marked as TODO in README.rst]
+[ ] make daemon code optional (#ifdef ENABLE_DAEMON)
+[ ] improved IPC (socket,...?)
+[?] init script generic, openrc
+[x] bashcomp
+[ ] maybe (optionally) add polkit support so that pm-suspend etc. can be run
+     directly without running the daemon as root
+     // or use euid,egid or CAP_SETUID,CAP_SETGID
+     // recommending sudo for now
+[ ] some sort of config/rule file(s)

@@ -6,6 +6,21 @@ export LC_COLLATE LC_NUMERIC
 f_uninstall_file = \
 	if test -e $(1) || test -h $(1); then rm -v -- $(1); fi
 
+f_which  = $(shell which $(1) 2>/dev/null)
+f_getver = $(shell \
+	$(X_EXTRACT_DEF) $(SRCDIR)/version.h BATWATCH_VERSION 2>/dev/null \
+)
+f_gen_checksums = ( \
+	sha256sum $(1) > $(1).sha256 && sha512sum $(1) > $(1).sha512 \
+)
+
+
+X_SH   := $(call f_which,sh)
+#X_ASH  := $(call f_which,ash)
+X_BASH := $(call f_which,bash)
+X_DASH := $(call f_which,dash)
+
+
 DESTDIR     :=
 BIN         := $(DESTDIR)/usr/bin
 SUDOERS_D   := $(DESTDIR)/etc/sudoers.d
@@ -33,15 +48,17 @@ EXTRA_CFLAGS   ?=
 X_EXTRACT_DEF  := $(CURDIR)/scripts/header_extract_def.sh
 X_GEN_V_HEADER := $(CURDIR)/scripts/gen_version_header.sh
 X_GEN_INIT     := $(CURDIR)/scripts/gen_init_script.sh
+X_GEN_SHLIBCC  := $(CURDIR)/scripts/gen_shlib_script.sh
 X_SCANELF      := scanelf
 
 O              := $(CURDIR)/build
 SRCDIR         := $(CURDIR)/src
+DISTDIR        := $(CURDIR)/dist
 CONTRIB_DIR    := $(CURDIR)/contrib
 INITSCRIPT_DIR := $(CONTRIB_DIR)/init-scripts
 
-COMMON_OBJECTS := \
-	$(addprefix $(O)/,globals.o daemonize.o run-script.o upower-listener.o)
+COMMON_OBJECTS := $(addprefix $(O)/,\
+	globals.o daemonize.o scriptenv.o run-script.o upower-listener.o)
 
 BATWATCH_OBJECTS := $(addprefix $(O)/,main.o)
 BATWATCH_NAME    := batwatch
@@ -68,6 +85,9 @@ install-all: install install-contrib
 PHONY += uninstall-all
 uninstall-all: uninstall uninstall-contrib
 
+PHONY += regen
+regen: gen-instagit init-scripts
+
 
 
 $(CURDIR)/$(BATWATCH_NAME): $(COMMON_OBJECTS) $(BATWATCH_OBJECTS)
@@ -84,11 +104,48 @@ $(O)/%.o: $(SRCDIR)/%.c | $(O)
 $(INITSCRIPT_DIR)/%: $(INITSCRIPT_DIR)/%.in $(X_GEN_INIT)
 	$(X_GEN_INIT) "$<" "$@"
 
+$(CURDIR)/scripts/%.sh: $(CURDIR)/scripts/%.in.sh $(X_GEN_SHLIBCC)
+	$(X_GEN_SHLIBCC) $< > $@.shlib_tmp
+ifneq ($(X_SH),)
+	$(X_SH) -n $@.shlib_tmp
+endif
+ifneq ($(X_BASH),)
+	$(X_BASH) -n $@.shlib_tmp
+endif
+ifneq ($(X_DASH),)
+	$(X_DASH) -n $@.shlib_tmp
+endif
+	mv -f -- $@.shlib_tmp $@
+
+
+
+$(DISTDIR):
+	mkdir -p $(DISTDIR)
 
 
 PHONY += version
-version: $(X_EXTRACT_DEF) | $(SRCDIR)/version.h
+version: $(X_EXTRACT_DEF) $(SRCDIR)/version.h
 	@$(X_EXTRACT_DEF) $(SRCDIR)/version.h BATWATCH_VERSION
+
+
+PHONY += dist
+dist: regen | $(DISTDIR)
+	$(eval MY_$@_VER := $(call f_getver))
+	git archive --worktree-attributes --format=tar HEAD \
+		--prefix=$(BATWATCH_NAME)-$(MY_$@_VER) \
+		> $(DISTDIR)/$(BATWATCH_NAME)-$(MY_$@_VER).tar
+
+	gzip -c $(DISTDIR)/$(BATWATCH_NAME)-$(MY_$@_VER).tar \
+		> $(DISTDIR)/$(BATWATCH_NAME)-$(MY_$@_VER).tar.gz
+
+	xz -c $(DISTDIR)/$(BATWATCH_NAME)-$(MY_$@_VER).tar \
+		> $(DISTDIR)/$(BATWATCH_NAME)-$(MY_$@_VER).tar.xz
+
+	( cd $(DISTDIR) && \
+		$(call f_gen_checksums,$(BATWATCH_NAME)-$(MY_$@_VER).tar) && \
+		$(call f_gen_checksums,$(BATWATCH_NAME)-$(MY_$@_VER).tar.gz) && \
+		$(call f_gen_checksums,$(BATWATCH_NAME)-$(MY_$@_VER).tar.xz) \
+	)
 
 
 
@@ -101,7 +158,22 @@ setver: $(X_GEN_V_HEADER) FORCE
 PHONY += clean
 clean:
 	-rm -f -- $(COMMON_OBJECTS) $(BATWATCH_OBJECTS) $(CURDIR)/$(BATWATCH_NAME)
-	-rmdir $(O)
+	-rm -f -- $(CURDIR)/scripts/*.shlib_tmp
+	-test ! -d $(O) || rmdir $(O)
+
+
+PHONY += genclean
+genclean: \
+	$(addprefix $(CURDIR)/scripts/,instagitlet.in.sh instagitlet.in.depend) \
+	$(addprefix $(INITSCRIPT_DIR)/$(BATWATCH_NAME).,init.in openrc.in)
+
+	rm -f -- $(addprefix $(INITSCRIPT_DIR)/$(BATWATCH_NAME).,init openrc)
+	rm -f -- $(CURDIR)/scripts/instagitlet.sh
+
+
+PHONY += distclean
+distclean: clean genclean
+
 
 
 
@@ -167,18 +239,37 @@ stat: $(BATWATCH_NAME)
 	@$(X_SCANELF) -n $(CURDIR)/$(BATWATCH_NAME)*
 
 
+PHONY += gen-instagit
+gen-instagit: $(CURDIR)/scripts/instagitlet.sh
+
+
+PHONY += _init-scripts__shell
+_init-scripts__shell: \
+	$(addprefix $(INITSCRIPT_DIR)/$(BATWATCH_NAME).,init openrc)
+
+ifneq ($(X_SH),)
+	$(foreach f,$^,$(X_SH) -n $(f) || exit 1;)
+endif
+ifneq ($(X_DASH),)
+	$(foreach f,$^,$(X_DASH) -n $(f) || exit 1;)
+endif
+
+
+PHONY += _init-scripts__others
+_init-scripts__others:
+
 
 PHONY += init-scripts
-init-scripts: \
-	$(INITSCRIPT_DIR)/$(BATWATCH_NAME).init \
-	$(INITSCRIPT_DIR)/$(BATWATCH_NAME).openrc
+init-scripts: _init-scripts__shell _init-scripts__others
+
+
 
 
 
 PHONY += help
 help:
 	@echo  'Targets:'
-	@echo  '  clean              - Remove generated files'
+	@echo  '  clean              - Remove most generated files'
 	@echo  '  all                - Build     all targets marked with [*]'
 	@echo  '  install-all        - Install   all targets marked with [+]'
 	@echo  '  uninstall-all      - Uninstall all targets marked with [-]'
@@ -196,11 +287,6 @@ endif
 	@echo  '                         (default: $(SUDOERS_D))'
 	@echo  '                       * bash completion to BASHCOMPDIR'
 	@echo  '                         (default: $(BASHCOMPDIR))'
-ifeq ($(DESTDIR),)
-	@echo  '                       (default: /)'
-else
-	@echo  '                       (default: $(DESTDIR))'
-endif
 	@echo  '- uninstall-contrib  -'
 	@echo  ''
 	@echo  'Init script/config install targets:'
@@ -214,15 +300,25 @@ endif
 #	@echo  '! uninstall-upstart  -'
 	@echo  ''
 	@echo  'Misc targets (devel/release helpers):'
-	@echo  '  setver             - Set version to VER (should be done before compiling)'
+	@echo  '  regen              - Regenerate all scripts'
+	@echo  '  genclean           - Remove generated scripts'
+	@echo  '  setver             - Set version to VER'
+	@echo  '                       (should be done before compiling/packing)'
 	@echo  '  init-scripts       - Regenerate init scripts'
-	@echo  '  stat               - size(1), scanelf(1) [implies $(BATWATCH_NAME)]'
+	@echo  'Z gen-instagit       - Regenerate scripts/instagitlet.sh'
+	@echo  'Z stat               - size(1), scanelf(1) [implies $(BATWATCH_NAME)]'
+	@echo  '  distclean          - clean + genclean'
+	@echo  '  dist               - Pack source as tarball to DISTDIR [implies regen]'
+	@echo  '                       (default: $(DISTDIR))'
 	@echo  ''
 	@echo  '  make O=<dir> [targets] Locate all intermediate output files in <dir>'
 	@echo  '                          (default: $(O))'
 	@echo  ''
 	@echo  'Install targets do not imply any build target.'
-	@echo  'Run "make" or "make all" before trying to install $(BATWATCH_NAME).'
+	@echo  'Targets marked with [Z] have special dependencies,'
+	@echo  'which are likely not installed on your system.'
+	@echo  ''
+	@echo  'Run "make" or "make all" to build $(BATWATCH_NAME).'
 
 PHONY += FORCE
 FORCE:
