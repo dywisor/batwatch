@@ -35,6 +35,24 @@
 readonly MY_GIT_BASE_URI='git://github.com/dywisor'
 readonly PN=batwatch
 
+# generate C_HEADER_DEPS with ./scripts/get_includes.sh ./src/
+readonly C_HEADER_DEPS="
+errno.h
+fcntl.h
+getopt.h
+glib.h
+libgen.h
+libupower-glib/upower.h
+signal.h
+stdio.h
+stdlib.h
+string.h
+sysexits.h
+sys/stat.h
+sys/types.h
+unistd.h
+"
+
 #@section func
 
 # int guess_git_dir ( **SCRIPT_DIR, **v0! )
@@ -73,6 +91,74 @@ guess_git_dir() {
    return 1
 }
 
+# int locate_file_in_path_var (
+#    filename, path_var, **PATH_SEPARATOR=":", **v0!
+# )
+#
+locate_file_in_path_var() {
+   #@VARCHECK 1
+   #@VARCHECK_EMPTYOK IFS_DEFAULT 2
+   v0=
+   local fname="${1}"
+   local IFS="${PATH_SEPARATOR:-:}"
+   set -- ${2}
+   IFS="${IFS_DEFAULT}"
+   while [ ${#} -gt 0 ]; do
+      if [ -d "${1}/" ]; then
+         if [ -f "${1}/${fname}" ]; then
+            v0="${1}/${fname}"
+            return 0
+         elif {
+            v0="$(find "${1}/" -xdev -type f -name "${fname}" | head -n 1)"
+            [ -n "${v0}" ]
+         }; then
+            return 0
+         else
+            v0=
+         fi
+      fi
+      shift
+   done
+   return 1
+}
+
+# void check_for_c_headers ( *header_files )
+#
+check_for_c_headers() {
+   local __MESSAGE_INDENT="${__MESSAGE_INDENT-}"
+   local miss_count=0
+   local fmt_name
+
+   [ -n "${C_INCLUDE_PATH-}" ] || local C_INCLUDE_PATH="/usr/include"
+
+   einfo "Checking whether C header files are present:"
+   message_indent
+   while [ ${#} -gt 0 ]; do
+      fmt_name="$(printf "%-23s" "${1}")"; : ${fmt_name:=${1}}
+
+      if locate_file_in_path_var "${1}" "${C_INCLUDE_PATH}"; then
+         einfo "${fmt_name} ... ${v0}" "->"
+      else
+         eerror "${fmt_name} ... not found." '!!' 2>&1
+         miss_count=$(( ${miss_count} + 1 ))
+      fi
+      shift
+   done
+   message_outdent
+
+   if [ ${miss_count} -eq 0 ]; then
+      einfo "Found all header files."
+   else
+      echo 1>&2
+      eerror "" '!!!'
+      eerror "${miss_count} header files are missing." '!!!'
+      eerror "Build process will probably fail." '!!!'
+      eerror "" '!!!'
+      echo 1>&2
+   fi
+
+   return 0
+}
 
 #@section __main__
 
@@ -210,24 +296,45 @@ echo
 if [ -n "${want_depcheck}" ]; then
    einfo "dependency check" ">>>"
    ${F_DEPCHECK} which
-   ${F_DEPCHECK} git
+
+   ${F_DEPCHECK} git || v0="git"
    X_GIT="${v0}"
-   ! __faking__ || : ${X_GIT:=git}
-   for dep in make gcc pkg-config; do
+
+   for dep in make gcc; do
       ${F_DEPCHECK} ${dep}
    done
-   # <C headers>
+
+   ${F_DEPCHECK} pkg-config || v0="false"
+   X_PKG_CONFIG="${v0}"
+
+   # check_for_c_headers() doesn't return != 0, currently
+   autodie check_for_c_headers ${C_HEADER_DEPS?}
+
+   configure_check_message_begin "pkg-config finds upower-glib"
+   if \
+      ${X_PKG_CONFIG} --libs --cflags upower-glib 1>/dev/null 2>/dev/null
+   then
+      configure_check_message_end "yes"
+   else
+      configure_check_message_end "no"
+      if __faking__; then
+         ewarn "upower libs not found, continuing anyway." '!!!'
+      else
+         die "upower libs are required for building ${PN}"
+      fi
+   fi
+
    echo
 else
    : ${X_GIT:=git}
+   : ${X_PKG_CONFIG:=pkg-config}
 fi
 
 ### depcheck (runtime)
 if [ -n "${want_rdepcheck}" ]; then
    einfo "runtime dependency check" ">>>"
-   ${F_DEPCHECK} upower
+   ${F_DEPCHECK} upower || v0="upower"
    X_UPOWER="${v0}"
-   ! __faking__ || : ${X_UPOWER:=upower}
    echo
 else
    : ${X_UPOWER:=upower}
@@ -254,7 +361,7 @@ if [ "${want_compile}" ]; then
    if __faking__; then
       instagitlet_fakecmd make make -n ${MAKEOPTS-} "${PN}"
       if [ -n "${FAKE_MODE_CHDIR_FAIL-}" ]; then
-         ewarn "skipping make command - chdir failed."
+         ewarn "skipping make command - chdir failed." '(dry-run)'
       else
          make ${MAKEOPTS-} -n "${PN}" || eerror "make returned ${?}." "!!!"
       fi
