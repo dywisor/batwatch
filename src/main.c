@@ -248,7 +248,6 @@ static void print_help_message (
          /* actually s/below --threshold/less or equal than --threshold/ */
          "  -x, --exe       <prog>        program to run if a battery's percentage is below --threshold\n"
          "  -b, --battery   <name>        restrict next --exe to <name>, e.g. 'BAT0'\n"
-         "  -0, --no-args                 don't pass any args to the next --exe\n"
          "\n"
          "options:\n"
          "  -F,                           minimal energy (as percentage) a battery must have\n"

@@ -113,6 +113,7 @@ static inline struct script_config* create_script_config (
       .percentage_last_run = -1.0,
       .exe                 = exe,
       .battery_name        = battery_name,
+      .type                = type,
    };
 
    return pscript;

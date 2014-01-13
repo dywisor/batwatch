@@ -59,6 +59,8 @@ INITSCRIPT_DIR := $(CONTRIB_DIR)/init-scripts
 
 COMMON_OBJECTS := $(addprefix $(O)/,\
 	globals.o daemonize.o scriptenv.o run-script.o upower-listener.o)
+COMMON_HEADERS := $(addprefix $(SRCDIR)/,\
+	data_types.h gcc-compat.h util.h version.h)
 
 BATWATCH_OBJECTS := $(addprefix $(O)/,main.o)
 BATWATCH_NAME    := batwatch
@@ -90,7 +92,7 @@ regen: gen-instagit init-scripts
 
 
 
-$(CURDIR)/$(BATWATCH_NAME): $(COMMON_OBJECTS) $(BATWATCH_OBJECTS)
+$(CURDIR)/$(BATWATCH_NAME): $(COMMON_OBJECTS) $(BATWATCH_OBJECTS) $(COMMON_HEADERS)
 	$(LINK_O) $^ -o $@
 
 $(BATWATCH_NAME): $(CURDIR)/$(BATWATCH_NAME)
