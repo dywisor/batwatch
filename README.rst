@@ -1,5 +1,5 @@
 ===============================
- batwatch - 10.01.2014 (draft)
+ batwatch - 13.01.2014 (draft)
 ===============================
 
 
@@ -65,7 +65,7 @@ Running it
 Usage::
 
    $ batwatch [-h] [-V] [option...]
-        [-T <percentage>] [-b <name>] [-0] [-I <seconds>] -x <prog> {-[Tbx0I]...}
+        [-T <percentage>] [-b <name>] [-I <seconds>] -x <prog> {-[TbxI]...}
 
 
 Required options (can be specified more than once):
@@ -81,9 +81,6 @@ Required options (can be specified more than once):
 -b, --battery <name>
    Restrict the *next* program (``--exe``) to a single battery referenced by
    name, e.g. `BAT0`.
-
--0, --no-args
-   Do not pass any args to the *next* program.
 
 -I, --inhibit <seconds>
    Do not call the *next* program if the time since the last
@@ -169,6 +166,11 @@ privileges, which can be achieved with *sudo* (and others):
 
 Refer to the ``sudoers(5)`` man page for details.
 
+.. Caution::
+
+   Arch users need to edit *contrib/batwatch.sudoers*
+   if pm-utils is to be used.
+
 
 
 ---------
@@ -207,36 +209,56 @@ no longer discharging or its percentage leaves the threshold range.
 
 See *event-scripts/* for examples.
 
-The following arguments are passed to scripts, unless ``--no-args`` has been
-specified:
+The following *environment variables* are passed to scripts (in addition to
+the usual system environment):
 
-.. table:: args passed to scripts
+.. table:: environment variables passed to scripts
 
-   +-------+-------------------------------+-----------------------+
-   | argno | description                   | example               |
-   +=======+===============================+=======================+
-   | 0     | program name/path             | /bin/true             |
-   +-------+-------------------------------+-----------------------+
-   | 1     | battery name                  | BAT0                  |
-   +-------+-------------------------------+-----------------------+
-   | 2     | battery sysfs path            | /sys/devices/...      |
-   +-------+-------------------------------+-----------------------+
-   | 3     | battery's remaining energy as | 20.0                  |
-   |       | percentage rounded to one     |                       |
-   |       | digit after the decimal point |                       |
-   |       | ('.', locale-independent)     |                       |
-   +-------+-------------------------------+-----------------------+
-   | 4     | fallback battery name         | BAT1                  |
-   |       | (if any)                      |                       |
-   +-------+-------------------------------+-----------------------+
-   | 5     | fallback battery sysfs path   | /sys/devices/...      |
-   +-------+-------------------------------+-----------------------+
-   | 6     | fallback battery' remaining   | 70.3                  |
-   |       | energy                        |                       |
-   +-------+-------------------------------+-----------------------+
+   +------------------------------+-------------------------------+-----------------------+
+   | name                         | description                   | example               |
+   +==============================+===============================+=======================+
+   | BATTERY                      | battery name                  | BAT0                  |
+   +------------------------------+-------------------------------+-----------------------+
+   | BATTERY_PERCENT              | battery's remaining energy as | 20.0                  |
+   |                              | percentage rounded to one     |                       |
+   |                              | digit after the decimal point |                       |
+   |                              | ('.', locale-independent)     |                       |
+   +------------------------------+-------------------------------+-----------------------+
+   | BATTERY_TIME                 | battery's remaining running   | 37                    |
+   |                              | time, in minutes              |                       |
+   |                              |                               |                       |
+   |                              | Set to 0 if unknown and -1    |                       |
+   |                              | if too big to be represented  |                       |
+   |                              | by an 32bit integer.          |                       |
+   +------------------------------+-------------------------------+-----------------------+
+   | BATTERY_SYSFS                | battery sysfs path            | /sys/devices/...      |
+   +------------------------------+-------------------------------+-----------------------+
+   +------------------------------+-------------------------------+-----------------------+
+   | FALLBACK_BATTERY_STATE       | string describing the         | *unknown*,            |
+   |                              | fallback battery's status     | *charging*,           |
+   |                              |                               | *discharging*,        |
+   |                              | empty if no fallback battery  | *empty*,              |
+   |                              | available                     | *fully-charged*,      |
+   |                              |                               | *pending-charge* or   |
+   |                              |                               | *pending-discharge*   |
+   +------------------------------+-------------------------------+-----------------------+
+   | FALLBACK_BATTERY             | fallback battery name         | BAT1                  |
+   |                              | (if any)                      |                       |
+   +------------------------------+-------------------------------+-----------------------+
+   | FALLBACK_BATTERY_PERCENT     | fallback battery's remaining  | 70.3                  |
+   |                              | energy                        |                       |
+   +------------------------------+-------------------------------+-----------------------+
+   | FALLBACK_BATTERY_TIME        | time in minutes until the     | 0                     |
+   |                              | fallback battery is fully     |                       |
+   |                              | charged.                      |                       |
+   |                              |                               |                       |
+   |                              | Set to 0 if unknown or not    |                       |
+   |                              | charging and -1 if too big.   |                       |
+   +------------------------------+-------------------------------+-----------------------+
+   | FALLBACK_BATTERY_SYSFS       | fallback battery sysfs path   | /sys/devices/...      |
+   +------------------------------+-------------------------------+-----------------------+
 
-
-Args 4-6 are empty if no fallback battery is available.
+These variables may be empty if no information is available.
 See *event-scripts/skel.sh* for a script template (**TODO**).
 
 |
