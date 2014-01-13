@@ -29,6 +29,7 @@
 #include "data_types.h"
 #include "util.h"
 
+
 /* actual run_script() function */
 static uint run_script__blocking (
    const struct script_config* const script,
@@ -92,61 +93,13 @@ static uint run_script__blocking (
    const struct battery_info*  const battery,
    const struct battery_info*  const fallback_battery
 ) {
-   static const char* const EMPTY_STR = "";
+   uint  retcode;
 
-   gchar* bat_percent_str;
-   gchar* fbat_percent_str;
-   guint  retcode;
-
-   bat_percent_str  = NULL;
-   fbat_percent_str = NULL;
-   retcode          = EXIT_FAILURE;
-
+   retcode = EXIT_FAILURE;
 
    /* if <check script type...> {...} */
 
-   if ( script->type == SCRIPT_TYPE_EXE_WITH_ARGS ) {
-      /* TODO/COULDFIX: better argv creation */
-
-      g_debug ( "running script %s for battery %s with args.",
-         script->exe, battery->name
-      );
-
-      bat_percent_str = format_percentage ( battery->remaining_percent );
-
-      if ( fallback_battery == NULL ) {
-         execlp (
-            script->exe,
-            script->exe,
-            /* args 1..3: name, sysfs, percentage */
-            battery->name, battery->sysfs_path, bat_percent_str,
-            /* args 4..6: fallback name,sysfs,percentage (not set) */
-            EMPTY_STR, EMPTY_STR, EMPTY_STR,
-            NULL
-         );
-      } else {
-         fbat_percent_str = format_percentage (
-            fallback_battery->remaining_percent
-         );
-
-         execlp (
-            script->exe,
-            script->exe,
-            /* args 1..3: name, sysfs, percentage */
-            battery->name, battery->sysfs_path, bat_percent_str,
-            /* args 4..6: fallback name,sysfs,percentage */
-            fallback_battery->name,
-            fallback_battery->sysfs_path,
-            fbat_percent_str,
-            NULL
-         );
-      }
-
-      /* exec should not return */
-      g_warning ( "exec %s failed: %s\n", script->exe, strerror ( errno ) );
-      retcode = EX_OSERR;
-
-   } else if ( script->type == SCRIPT_TYPE_EXE_NO_ARGS ) {
+   if ( script->type == SCRIPT_TYPE_EXE_NO_ARGS ) {
       g_debug ( "running script %s for battery %s without args.",
          script->exe, battery->name
       );
@@ -156,14 +109,24 @@ static uint run_script__blocking (
       g_warning ( "exec %s failed: %s\n", script->exe, strerror ( errno ) );
       retcode = EX_OSERR;
 
+/*
+   } else if ( script->type == SCRIPT_TYPE_EXE_WITH_ARGS ) {
+      // stub -- no args passed to scripts
+      g_debug ( "running script %s for battery %s with args.",
+         script->exe, battery->name
+      );
+
+      execlp ( script->exe, script->exe, NULL );
+      // exec should not return
+      g_warning ( "exec %s failed: %s\n", script->exe, strerror ( errno ) );
+      retcode = EX_OSERR;
+*/
    } else {
       g_warning ( "unknown script type %d\n", script->type );
    }
 
 
 /* run_script_sync_return: */
-   if ( bat_percent_str  != NULL ) { g_free ( bat_percent_str  ); }
-   if ( fbat_percent_str != NULL ) { g_free ( fbat_percent_str ); }
 
    return retcode;
 }

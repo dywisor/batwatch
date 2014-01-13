@@ -52,13 +52,15 @@ struct batwatch_globals {
    GMainLoop*     main_loop;
    UpClient*      upower_client;
    /* gint           event_mask; */
+   gint x;
 };
 
 
 extern const double      DEFAULT_FALLBACK_PERCENTAGE;
 extern const double      DEFAULT_PERCENTAGE_THRESHOLD;
-extern const char* const SCRIPT_PERCENT_ARG_FMT;
-extern const int         SCRIPT_PERCENT_ARG_FMT_BUFSIZE;
+extern const char* const SCRIPT_PERCENT_VAR_FMT;
+extern const int         SCRIPT_PERCENT_VAR_FMT_BUFSIZE;
+extern const char* const SCRIPT_TIME_VAR_FMT;
 extern const uint        BATTERY_COULD_BE_DISCHARGING;
 
 /* for signal handling */

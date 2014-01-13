@@ -35,6 +35,7 @@
 #include "data_types.h"
 #include "globals.h"
 #include "run-script.h"
+#include "scriptenv.h"
 
 
 static inline void log_battery_found (
@@ -121,6 +122,8 @@ extern void check_batteries (
    gboolean              is_present;
    gdouble               percentage;
    const gchar*          sysfs_path;
+   gint64                time_to_empty;
+   gint64                time_to_full;
    /* num_batteries used for logging only */
    guint                 num_batteries;
    guint                 k;
@@ -144,11 +147,13 @@ extern void check_batteries (
          dev = g_ptr_array_index ( devices, k );
          g_object_get (
             dev,
-            "kind",        &dev_type,
-            "state",       &dev_state,
-            "is-present",  &is_present,
-            "percentage",  &percentage,
-            "native-path", &sysfs_path,
+            "kind",          &dev_type,
+            "state",         &dev_state,
+            "is-present",    &is_present,
+            "percentage",    &percentage,
+            "native-path",   &sysfs_path,
+            "time-to-empty", &time_to_empty,
+            "time-to-full",  &time_to_full,
             NULL
          );
 
@@ -160,7 +165,9 @@ extern void check_batteries (
                ( dev_state & BATTERY_COULD_BE_DISCHARGING ) ||
                ( is_present && ( dev_state == UP_DEVICE_STATE_UNKNOWN ) )
             ) {
-               pbat = create_battery_info ( sysfs_path, percentage );
+               pbat = create_battery_info (
+                  sysfs_path, percentage, dev_state, time_to_empty
+               );
                log_battery_found ( pbat, "discharging" );
                g_ptr_array_add ( batteries_discharging, pbat );
 
@@ -179,7 +186,7 @@ extern void check_batteries (
                   g_free ( fallback_battery );
                }
                fallback_battery = create_battery_info (
-                  sysfs_path, percentage
+                  sysfs_path, percentage, dev_state, time_to_full
                );
                log_battery_found ( fallback_battery, "fallback" );
             }
@@ -229,6 +236,12 @@ extern void check_batteries (
  * Important:
  *  batteries_discharging and globals->script smust be sorted before
  *  calling this function.
+ *
+ * Note:
+ *  This function manipulates environment variables.
+ *  Generally, it's OK to do so, but signal handlers should backup/restore
+ *  battery-related env vars.
+ *
  */
 static gboolean run_scripts_as_necessary (
    struct batwatch_globals* const globals,
@@ -239,6 +252,9 @@ static gboolean run_scripts_as_necessary (
    gboolean              any_script_dirty;
    struct script_config* pscript;
    struct battery_info*  pbat;
+   /* pointer to the battery for which env vars have been set */
+   struct battery_info*  penvbat;
+
 
 
    /*
@@ -264,8 +280,9 @@ static gboolean run_scripts_as_necessary (
     */
    any_script_dirty = FALSE;
 
-   j    = 0;
-   pbat = g_ptr_array_index ( batteries_discharging, j );
+   j       = 0;
+   pbat    = g_ptr_array_index ( batteries_discharging, j );
+   penvbat = NULL;
 
    for (
       k = 0; (
@@ -290,7 +307,7 @@ static gboolean run_scripts_as_necessary (
          }
       }
 
-      if ( j >= batteries_discharging->len ) {
+      if ( pbat == NULL ) {
          /* script cannot handle battery */
          reset_script_status ( pscript );
       } else if ( ! battery_in_critical_range ( pscript, pbat ) ) {
@@ -311,6 +328,25 @@ static gboolean run_scripts_as_necessary (
 
       } else {
          /* run script */
+
+         /*
+          * set environment variables if penvbat != pbat
+          *
+          * It's OK to pollute the global env here.
+          * Signal handlers should backup/restore it, though.
+          */
+         if ( pbat != penvbat ) {
+            if ( set_battery_env_vars ( pbat, fallback_battery ) != 0 ) {
+               /* this should never happen */
+               g_error (
+                  "check_batteries(): failed to set environment variables!"
+               );
+               /* ^ aborts the program */
+            }
+
+            penvbat = pbat;
+         }
+
          run_script ( pscript, pbat, fallback_battery );
          any_script_dirty = TRUE;
       }

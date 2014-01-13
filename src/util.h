@@ -26,15 +26,47 @@
 #include <string.h>
 
 #include "globals.h"
+#include "gcc-compat.h"
 
 
-/* converts a double into a str */
+static inline gchar* format_time_int   ( const gint32 i  )
+   ATTRIBUTE_WARN_UNUSED_RESULT;
+static inline gchar* format_percentage ( const gdouble p )
+   ATTRIBUTE_WARN_UNUSED_RESULT;
+
+/*
+ * converts an gint64 to gint32
+ *
+ * Returns TRUE if the number could be converted without loss of information
+ * (and sets *result = <number>), else FALSE (and sets *result = -1).
+ * */
+static inline gboolean util_gint64_to_32 (
+   const gint64 big, gint32* result
+) {
+   if ( big >= G_MININT32 && big <= G_MAXINT32 ) {
+      *result = (gint32) big;
+      return TRUE;
+   } else {
+      *result = -1;
+      return FALSE;
+   }
+}
+
+/* converts an gint32 represting seconds or minutes to a str */
+static inline gchar* format_time_int ( const gint32 i ) {
+   gchar* retstr;
+   retstr = g_strdup_printf ( SCRIPT_TIME_VAR_FMT, i );
+   return retstr;
+}
+
+
+/* converts a gdouble into a str */
 static inline gchar* format_percentage ( const gdouble p ) {
    gchar* retstr;
 
-   retstr = g_malloc ( SCRIPT_PERCENT_ARG_FMT_BUFSIZE );
+   retstr = g_malloc ( SCRIPT_PERCENT_VAR_FMT_BUFSIZE );
    return g_ascii_formatd (
-      retstr, SCRIPT_PERCENT_ARG_FMT_BUFSIZE, SCRIPT_PERCENT_ARG_FMT, p
+      retstr, SCRIPT_PERCENT_VAR_FMT_BUFSIZE, SCRIPT_PERCENT_VAR_FMT, p
    );
 }
 

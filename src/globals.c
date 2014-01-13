@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <glib.h>
 #include <libupower-glib/upower.h>
 
 #include "globals.h"
@@ -25,8 +26,9 @@ struct batwatch_globals* p_batwatch_globals = NULL;
 
 const double      DEFAULT_FALLBACK_PERCENTAGE    = 30.0;
 const double      DEFAULT_PERCENTAGE_THRESHOLD   = 10.0;
-const char* const SCRIPT_PERCENT_ARG_FMT         = "%.1f";
-const int         SCRIPT_PERCENT_ARG_FMT_BUFSIZE = 7;
+const char* const SCRIPT_PERCENT_VAR_FMT         = "%.1f";
+const int         SCRIPT_PERCENT_VAR_FMT_BUFSIZE = 7;
+const char* const SCRIPT_TIME_VAR_FMT            = "%" G_GINT32_FORMAT;
 const uint        BATTERY_COULD_BE_DISCHARGING   = (
    UP_DEVICE_STATE_DISCHARGING
 );

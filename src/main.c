@@ -46,6 +46,7 @@
 #include "util.h"
 #include "daemonize.h"
 #include "upower-listener.h"
+#include "scriptenv.h"
 
 
 #ifdef GLIB_VERSION_2_36
@@ -62,18 +63,38 @@ static inline gboolean running_in_foreground(void) {
 
 
 static void batwatch_catch_signal ( const int sig ) {
+   char* env_backup[SCRIPT_ENV_VARCOUNT];
+   gboolean signal_handled;
+
+   signal_handled = FALSE;
+
    switch ( sig ) {
       case SIGHUP:
          /* might change in future */
+
+         /* back up env vars */
+         backup_battery_env_vars_into ( env_backup );
+
          check_batteries (
             p_batwatch_globals->upower_client, p_batwatch_globals
          );
+
+         /* restore env vars */
+         if ( restore_battery_env_vars ( env_backup ) != 0 ) {
+            g_warning ( "failed to restore env vars!" );
+         }
+         free_battery_env_backup ( env_backup );
+
+         /* done */
+         /* signal_handled = TRUE; */
          break;
 
       case SIGINT:
       case SIGQUIT:
       case SIGTERM:
          /* quit main loop if possible, else exit here */
+         /* signal_handled = TRUE; */
+
          if ( p_batwatch_globals != NULL ) {
             if ( p_batwatch_globals->main_loop != NULL ) {
                g_main_loop_quit ( p_batwatch_globals->main_loop );
@@ -92,6 +113,10 @@ static void batwatch_catch_signal ( const int sig ) {
 
       case SIGUSR1:
          /* reset script status, check batteries */
+
+         /* back up env vars */
+         backup_battery_env_vars_into ( env_backup );
+
          if (
             p_batwatch_globals != NULL && p_batwatch_globals->scripts != NULL
          ) {
@@ -100,9 +125,18 @@ static void batwatch_catch_signal ( const int sig ) {
                check_batteries (
                   p_batwatch_globals->upower_client, p_batwatch_globals
                );
-               break;
+               signal_handled = TRUE;
             }
          }
+
+         /* restore env vars */
+         if ( restore_battery_env_vars ( env_backup ) != 0 ) {
+            g_warning ( "failed to restore env vars!" );
+         }
+         free_battery_env_backup ( env_backup );
+
+         /* done */
+         if ( signal_handled ) { break; }
 
       default:
          /* stub */
@@ -241,7 +275,6 @@ int main ( const int argc, char* const* argv ) {
       { "threshold",    required_argument, NULL, 'T' },
       { "exe",          required_argument, NULL, 'x' },
       { "battery",      required_argument, NULL, 'b' },
-      { "no-args",      no_argument,       NULL, '0' },
       { "fallback-min", required_argument, NULL, 'F' },
       { "no-fork",      no_argument,       NULL, 'N' },
       { "stdout",       required_argument, NULL, '1' },
@@ -252,11 +285,11 @@ int main ( const int argc, char* const* argv ) {
       { "version",      no_argument,       NULL, 'V' },
       { NULL,           no_argument,       NULL,  0  }
    };
-   static const char* const short_options = "T:x:b:0F:N1:2:C:p:hV";
+   static const char* const short_options = "T:x:b:F:N1:2:C:p:hV";
 
    const char* const prog_name = basename(argv[0]);
    struct batwatch_globals globals;
-   enum script_type script_type;
+   /* enum script_type script_type; */
    gint     i;
    gint     conv_err;
    gchar*   battery_restriction;
@@ -267,10 +300,11 @@ int main ( const int argc, char* const* argv ) {
    batwatch_g_type_init();
    batwatch_init_globals ( &globals );
 
-   script_type         = SCRIPT_TYPE_DEFAULT;
+   /* script_type         = SCRIPT_TYPE_DEFAULT; */
    battery_restriction = NULL;
    threshold           = DEFAULT_PERCENTAGE_THRESHOLD;
    want_daemonize      = TRUE;
+
 
    /* logging */
    //g_log_set_handler ( NULL, G_LOG_LEVEL_MASK, g_log_default_handler, NULL );
@@ -295,17 +329,15 @@ int main ( const int argc, char* const* argv ) {
             battery_restriction = optarg;
             break;
 
-         case '0':
-            script_type = SCRIPT_TYPE_EXE_NO_ARGS;
-            break;
-
          case 'x':
             g_ptr_array_add ( globals.scripts,
                create_script_config (
-                  optarg, threshold, battery_restriction, script_type
+                  optarg, threshold, battery_restriction,
+                  SCRIPT_TYPE_DEFAULT
+                  /* script_type */
                )
             );
-            script_type         = SCRIPT_TYPE_DEFAULT;
+            /* script_type         = SCRIPT_TYPE_DEFAULT; */
             battery_restriction = NULL;
             break;
 
@@ -372,6 +404,11 @@ int main ( const int argc, char* const* argv ) {
       );
       globals.exit_code = EX_USAGE;
       /* goto main_exit; */
+
+   } else if ( unset_battery_env_vars() != 0 ) {
+      perror ( "unset battery env vars" );
+      globals.exit_code = EX_SOFTWARE;
+      /* got main_exit; */
 
    } else if ( want_daemonize ) {
       /* setup main loop for running as daemon */

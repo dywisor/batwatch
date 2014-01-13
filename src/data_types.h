@@ -22,15 +22,20 @@
 
 #include <glib.h>
 #include <libgen.h>
+#include <libupower-glib/upower.h>
+
+#include "gcc-compat.h"
+
 
 enum script_type {
-   SCRIPT_TYPE_DEFAULT        = 0,
-   SCRIPT_TYPE_EXE_WITH_ARGS  = SCRIPT_TYPE_DEFAULT,
+   SCRIPT_TYPE_EXE_WITH_ARGS  = 0,
    SCRIPT_TYPE_EXE_NO_ARGS    = 1,
 
    SCRIPT_TYPE__BUILTIN_BEGIN = 40,
    /* builtin actions (low-prio TODO) */
    SCRIPT_TYPE__BUILTIN_END   = 40,
+
+   SCRIPT_TYPE_DEFAULT        = SCRIPT_TYPE_EXE_NO_ARGS,
 };
 
 /*
@@ -65,18 +70,31 @@ enum script_type {
  *     that meets the other constraints (threshold, that is).
  */
 struct script_config {
+   const gchar*     exe;
+   const gchar*     battery_name;
    gdouble          threshold_high;
    /* gdouble threshold_low; // not implemented */
    gdouble          percentage_last_run;
-   const gchar*     exe;
-   const gchar*     battery_name;
    enum script_type type;
 };
 
+/* battery info
+ *
+ * Some references/docs for adding new entries here:
+ * - data from upower: http://upower.freedesktop.org/docs/Device.html
+ * - data types for ^: http://dbus.freedesktop.org/doc/dbus-specification.html#basic-types
+ *
+ * Notes:
+ * - pointers to non-constant data need extra work (free_battery_info())
+ *
+ */
 struct battery_info {
-   const gchar* name;
-   const gchar* sysfs_path;
-   gdouble      remaining_percent;
+   const gchar*   name;
+   const gchar*   sysfs_path;
+   gdouble        remaining_percent;
+   /* either remaining running time or time until charged, in seconds(!) */
+   gint64         time;
+   UpDeviceState  state;
 };
 
 
@@ -98,11 +116,13 @@ static inline struct script_config* create_script_config (
    };
 
    return pscript;
-}
+} ATTRIBUTE_WARN_UNUSED_RESULT
 
 static inline struct battery_info* create_battery_info (
    const gchar* sysfs_path,
-   gdouble      remaining_percent
+   gdouble      remaining_percent,
+   uint         state,
+   gint64       time
 ) {
    struct battery_info* pbat;
 
@@ -111,13 +131,15 @@ static inline struct battery_info* create_battery_info (
       .name              = basename ( (gchar*) sysfs_path ),
       .sysfs_path        = sysfs_path,
       .remaining_percent = remaining_percent,
+      .state             = state,
+      .time              = time,
    };
 
    return pbat;
-}
+} ATTRIBUTE_WARN_UNUSED_RESULT
 
 
-
+/* for sorting script config / battery status lists */
 static inline gint compare_script_config (
    struct script_config* const a,
    struct script_config* const b
@@ -146,11 +168,13 @@ static inline gboolean script_check_has_been_run (
 ) {
    /*
     * TODO, additional checks (if pbat != NULL)
-    * * battery state, example scenario:
-    * (a) battery enters crit range -> script is run
-    * (b) user plugs in AC          -> nothing happens
-    * (c) user plugs out AC, but battery still in crit range
-    *     -> nothing happens(!)
+    * * (unintentional) fast-changing battery states, example scenario:
+    * (a) battery enters crit range            -> script is run
+    * (b) user plugs in AC                     -> script is reset
+    * (c) AC is plugged out shorty after (<1s) -> script is run
+    * (d) user plugs in AC                     -> script is reset
+    *
+    * Maybe remember last_state + timestamp/ticket
     */
    return ( pscript->percentage_last_run < 0.0 ) ? FALSE : TRUE;
 }

@@ -23,8 +23,9 @@
 #include <glib.h>
 
 #include "globals.h"
+#include "gcc-compat.h"
 
-void     daemon_exit_now ( const int* const pretcode );
+void     daemon_exit_now ( const int* const pretcode ) ATTRIBUTE_NORETURN;
 gboolean daemonize       ( struct batwatch_globals* const globals );
 
 
