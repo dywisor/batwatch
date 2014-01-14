@@ -58,7 +58,7 @@ CONTRIB_DIR    := $(CURDIR)/contrib
 INITSCRIPT_DIR := $(CONTRIB_DIR)/init-scripts
 
 COMMON_OBJECTS := $(addprefix $(O)/,\
-	globals.o daemonize.o scriptenv.o run-script.o upower-listener.o)
+	globals.o daemonize.o scriptenv.o run-script.o upower-listener.o gsignal_emitter.o)
 COMMON_HEADERS := $(addprefix $(SRCDIR)/,\
 	data_types.h gcc-compat.h util.h version.h)
 

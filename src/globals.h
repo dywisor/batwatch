@@ -23,9 +23,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <glib.h>
+#include <glib-object.h>
 #include <libupower-glib/upower.h>
 
 #include "data_types.h"
+#include "gsignal_emitter.h"
 
 /*
 enum {
@@ -39,6 +41,7 @@ enum {
 
 struct batwatch_globals {
    /* GPtrArray<struct script_config*> */
+   BatwatchSignalEmitter* signal_emitter;
    GPtrArray*     scripts;
    gboolean       scripts_dirty;
    gboolean       is_daemon;
@@ -70,6 +73,8 @@ extern struct batwatch_globals* p_batwatch_globals;
 static inline void batwatch_init_globals (
    struct batwatch_globals* const globals
 ) {
+   globals->signal_emitter          = batwatch_signal_emitter_new();
+   g_object_ref ( globals->signal_emitter );
    globals->scripts                 = g_ptr_array_new();
    globals->scripts_dirty           = FALSE;
    globals->is_daemon               = FALSE;
@@ -106,7 +111,16 @@ static inline void batwatch_globals_unset_main_loop_vars (
 static inline void batwatch_tear_down_globals (
    struct batwatch_globals* const globals
 ) {
+   if ( p_batwatch_globals == globals ) {
+      p_batwatch_globals = NULL;
+   }
+
    batwatch_globals_unset_main_loop_vars ( globals );
+
+   if ( globals->signal_emitter != NULL ) {
+      g_object_unref ( globals->signal_emitter );
+      globals->signal_emitter = NULL;
+   }
 
    if ( globals->scripts != NULL ) {
       g_ptr_array_unref ( globals->scripts );
@@ -117,9 +131,7 @@ static inline void batwatch_tear_down_globals (
       close ( globals->pidfile_fd );
    }
 
-   if ( p_batwatch_globals == globals ) {
-      p_batwatch_globals = NULL;
-   }
+
 }
 
 static inline void batwatch_globals_reset_scripts (

@@ -37,16 +37,19 @@
 #include <getopt.h>
 #include <libgen.h>
 #include <glib.h>
+#include <glib-object.h>
 #include <signal.h>
 #include <libupower-glib/upower.h>
 
 #include "version.h"
+#include "gsignal_emitter.h"
 #include "globals.h"
 #include "data_types.h"
 #include "util.h"
 #include "daemonize.h"
 #include "upower-listener.h"
 #include "scriptenv.h"
+
 
 
 #ifdef GLIB_VERSION_2_36
@@ -56,37 +59,41 @@ static inline void batwatch_g_type_init(void) {}
 static inline void batwatch_g_type_init(void) { g_type_init(); }
 #endif
 
-
 static inline gboolean running_in_foreground(void) {
    return p_batwatch_globals->is_daemon ? FALSE: TRUE;
 }
 
+static void catch_gsignal_reload (
+   BatwatchSignalEmitter*   const emitter,
+   struct batwatch_globals* const globals
+) {
+   g_assert ( p_batwatch_globals     != NULL );
+   g_assert ( globals->upower_client != NULL );
+   check_batteries ( globals->upower_client, globals );
+}
+
+static void catch_gsignal_force_reset (
+   BatwatchSignalEmitter*   const emitter,
+   struct batwatch_globals* const globals
+) {
+   g_assert ( p_batwatch_globals     != NULL );
+   batwatch_globals_reset_scripts ( globals );
+   g_assert ( globals->upower_client != NULL );
+   check_batteries ( globals->upower_client, globals );
+}
 
 static void batwatch_catch_signal ( const int sig ) {
-   char* env_backup[SCRIPT_ENV_VARCOUNT];
-   gboolean signal_handled;
-
-   signal_handled = FALSE;
-
+   /* should use write() and not printf() here */
    switch ( sig ) {
       case SIGHUP:
          /* might change in future */
-
-         /* back up env vars */
-         backup_battery_env_vars_into ( env_backup );
-
-         check_batteries (
-            p_batwatch_globals->upower_client, p_batwatch_globals
-         );
-
-         /* restore env vars */
-         if ( restore_battery_env_vars ( env_backup ) != 0 ) {
-            g_warning ( "failed to restore env vars!" );
+         if ( p_batwatch_globals != NULL ) {
+            batwatch_signal_emitter_emit (
+               p_batwatch_globals->signal_emitter, BATWATCH_GSIGNAL_RELOAD
+            );
+         } else {
+            fprintf ( stderr, "SIGHUP: no globals!\n" );
          }
-         free_battery_env_backup ( env_backup );
-
-         /* done */
-         /* signal_handled = TRUE; */
          break;
 
       case SIGINT:
@@ -113,30 +120,15 @@ static void batwatch_catch_signal ( const int sig ) {
 
       case SIGUSR1:
          /* reset script status, check batteries */
-
-         /* back up env vars */
-         backup_battery_env_vars_into ( env_backup );
-
-         if (
-            p_batwatch_globals != NULL && p_batwatch_globals->scripts != NULL
-         ) {
-            batwatch_globals_reset_scripts ( p_batwatch_globals );
-            if ( p_batwatch_globals->upower_client != NULL ) {
-               check_batteries (
-                  p_batwatch_globals->upower_client, p_batwatch_globals
-               );
-               signal_handled = TRUE;
-            }
+         if ( p_batwatch_globals != NULL ) {
+            batwatch_signal_emitter_emit (
+               p_batwatch_globals->signal_emitter,
+               BATWATCH_GSIGNAL_FORCE_RESET
+            );
+         } else {
+            fprintf ( stderr, "SIGUSR1: no globals!\n" );
          }
-
-         /* restore env vars */
-         if ( restore_battery_env_vars ( env_backup ) != 0 ) {
-            g_warning ( "failed to restore env vars!" );
-         }
-         free_battery_env_backup ( env_backup );
-
-         /* done */
-         if ( signal_handled ) { break; }
+         break;
 
       default:
          /* stub */
@@ -204,6 +196,7 @@ static void main_run ( struct batwatch_globals* const globals ) {
    globals->upower_client = up_client_new();
    g_assert ( globals->upower_client != NULL );
 
+
    if ( up_client_enumerate_devices_sync (
       globals->upower_client, NULL, &my_error
    ) ) {
@@ -218,6 +211,16 @@ static void main_run ( struct batwatch_globals* const globals ) {
       g_signal_connect (
          globals->upower_client, "device-removed",
          G_CALLBACK(catch_upower_event_and_reset), (gpointer*) globals
+      );
+
+      g_signal_connect (
+         globals->signal_emitter, "batwatch-reload",
+         G_CALLBACK(catch_gsignal_reload), (gpointer*) globals
+      );
+
+      g_signal_connect (
+         globals->signal_emitter, "batwatch-force-reset",
+         G_CALLBACK(catch_gsignal_force_reset), (gpointer*) globals
       );
 
       check_batteries ( globals->upower_client, globals );
@@ -298,6 +301,7 @@ int main ( const int argc, char* const* argv ) {
 
    batwatch_g_type_init();
    batwatch_init_globals ( &globals );
+
 
    /* script_type         = SCRIPT_TYPE_DEFAULT; */
    battery_restriction = NULL;
