@@ -317,6 +317,8 @@ the usual system environment):
    +------------------------------+-------------------------------+-----------------------+
    | FALLBACK_BATTERY_SYSFS       | fallback battery sysfs path   | /sys/devices/...      |
    +------------------------------+-------------------------------+-----------------------+
+   | ON_AC_POWER                  | 1 if on AC power, else 0      | 1                     |
+   +------------------------------+-------------------------------+-----------------------+
 
 These variables may be empty if no information is available.
 See *event-scripts/skel.sh* for a script template (**TODO**).

@@ -25,6 +25,7 @@
 #endif
 
 #include "data_types.h"
+#include "globals.h"
 
 /* mini-howto for adding new env vars:
  *
@@ -74,6 +75,9 @@ enum {
    SCRIPT_ENV_INDEX_FBATTIME,
    SCRIPT_ENV_INDEX_FBATSTATE,
 
+   /* misc */
+   SCRIPT_ENV_INDEX_ON_AC,
+
    /* number of elements -- last entry! */
    SCRIPT_ENV_VARCOUNT
 };
@@ -84,8 +88,9 @@ extern const char* SCRIPT_ENV_VARNAMES[SCRIPT_ENV_VARCOUNT];
 extern int unset_battery_env_vars(void);
 
 extern int set_battery_env_vars (
-   const struct battery_info* const battery,
-   const struct battery_info* const fallback_battery
+   const struct battery_info*     const battery,
+   const struct battery_info*     const fallback_battery,
+   const struct batwatch_globals* const globals
 );
 
 extern void backup_battery_env_vars_into ( char* dest [SCRIPT_ENV_VARCOUNT] );

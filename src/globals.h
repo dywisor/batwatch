@@ -45,6 +45,7 @@ struct batwatch_globals {
    GPtrArray*     scripts;
    gboolean       scripts_dirty;
    gboolean       is_daemon;
+   gboolean       on_ac_power;
    const gchar*   daemon_stdout_file;
    const gchar*   daemon_stderr_file;
    const gchar*   pidfile;
@@ -78,6 +79,7 @@ static inline void batwatch_init_globals (
    globals->scripts                 = g_ptr_array_new();
    globals->scripts_dirty           = FALSE;
    globals->is_daemon               = FALSE;
+   globals->on_ac_power             = FALSE;
    globals->daemon_stdout_file      = NULL;
    globals->daemon_stderr_file      = NULL;
    globals->pidfile                 = NULL;

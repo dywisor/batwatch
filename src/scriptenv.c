@@ -62,6 +62,9 @@ const char* SCRIPT_ENV_VARNAMES[SCRIPT_ENV_VARCOUNT] = {
    [SCRIPT_ENV_INDEX_FBATPERC]  = "FALLBACK_BATTERY_PERCENT",
    [SCRIPT_ENV_INDEX_FBATTIME]  = "FALLBACK_BATTERY_TIME",
    [SCRIPT_ENV_INDEX_FBATSTATE] = "FALLBACK_BATTERY_STATE",
+
+   /* misc */
+   [SCRIPT_ENV_INDEX_ON_AC]     = "ON_AC_POWER",
 };
 
 
@@ -81,8 +84,9 @@ extern int unset_battery_env_vars(void) {
 
 
 extern int set_battery_env_vars (
-   const struct battery_info* const battery,
-   const struct battery_info* const fallback_battery
+   const struct battery_info*     const battery,
+   const struct battery_info*     const fallback_battery,
+   const struct batwatch_globals* const globals
 ) {
    gchar* strbuf;
    int    ret;
@@ -162,6 +166,11 @@ extern int set_battery_env_vars (
       scriptenv_setenv ( SCRIPT_ENV_INDEX_FBATTIME,  NULL, &ret );
       scriptenv_setenv ( SCRIPT_ENV_INDEX_FBATSTATE, NULL, &ret );
    }
+
+   /* misc */
+   scriptenv_setenv (
+      SCRIPT_ENV_INDEX_ON_AC,  globals->on_ac_power ? "1" : "0", &ret
+   );
 
    return ret;
 }

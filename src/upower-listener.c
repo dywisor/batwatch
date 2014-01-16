@@ -67,6 +67,13 @@ static gboolean run_scripts_as_necessary (
    struct battery_info*     const fallback_battery
 );
 
+/*
+static inline gboolean get_line_power_status ( UpDevice* const dev ) {
+   gboolean is_online;
+   g_object_get ( dev, "online", &is_online, NULL );
+   return is_online;
+}
+*/
 
 /*
  * default event handler
@@ -157,6 +164,8 @@ extern void check_batteries (
    UpDeviceKind          dev_type;
    UpDeviceState         dev_state;
    gboolean              is_present;
+   gboolean              have_ac_power;
+   gboolean              ac_is_online;
    gdouble               percentage;
    const gchar*          sysfs_path;
    gint64                time_to_empty;
@@ -178,6 +187,7 @@ extern void check_batteries (
       /* populate batteries_discharging */
       batteries_discharging = g_ptr_array_new();
       fallback_battery      = NULL;
+      have_ac_power         = FALSE;
       num_batteries         = 0;
 
       for ( k = 0; k < devices->len; k++ ) {
@@ -191,6 +201,7 @@ extern void check_batteries (
             "native-path",   &sysfs_path,
             "time-to-empty", &time_to_empty,
             "time-to-full",  &time_to_full,
+            "online",        &ac_is_online,
             NULL
          );
 
@@ -231,12 +242,27 @@ extern void check_batteries (
             }
 
             num_batteries++;
-         } /* end if is a battery */
+         } else if ( dev_type == UP_DEVICE_KIND_LINE_POWER ) {
+            if ( ac_is_online ) { have_ac_power = TRUE; }
+         } /* end if is a battery||AC */
       }
 
       g_debug ( "found %d batteries out of which %d are discharging.",
          num_batteries, batteries_discharging->len
       );
+
+      if ( have_ac_power ) {
+         g_debug ( "AC is online." );
+      } else if ( num_batteries == 0 ) {
+         g_debug (
+            "have_ac_power is FALSE, but no batteries found! Defaulting to TRUE."
+         );
+         have_ac_power = TRUE;
+      } else {
+         g_debug ( "AC is offline." );
+      }
+
+      globals->on_ac_power = have_ac_power;
 
       /* let's see what needs to be run */
       if ( batteries_discharging->len > 0 ) {
@@ -375,7 +401,7 @@ static gboolean run_scripts_as_necessary (
           * Signal handlers should backup/restore it, though.
           */
          if ( pbat != penvbat ) {
-            if ( set_battery_env_vars ( pbat, fallback_battery ) != 0 ) {
+            if ( set_battery_env_vars ( pbat, fallback_battery, globals ) != 0 ) {
                /* this should never happen */
                g_error (
                   "check_batteries(): failed to set environment variables!"
