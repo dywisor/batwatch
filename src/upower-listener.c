@@ -73,12 +73,13 @@ static gboolean run_scripts_as_necessary (
  *
  * Calls check_batteries() if the device in question is a battery.
  */
-extern void catch_upower_event (
+extern void catch_upower_event_device_changed (
    UpClient* const client, UpDevice* const dev,
    struct batwatch_globals* const globals
 ) {
    UpDeviceKind dev_type;
    g_object_get ( dev, "kind", &dev_type, NULL );
+
    if ( dev_type == UP_DEVICE_KIND_BATTERY ) {
       check_batteries ( client, globals );
    }
@@ -92,14 +93,50 @@ extern void catch_upower_event (
  *
  * TODO (multibat)
  */
-extern void catch_upower_event_and_reset (
+static void handle_upower_battery_reset_event (
    UpClient* const client, UpDevice* const dev,
    struct batwatch_globals* const globals
 ) {
-   /* reset scripts that could handle %dev IFF <dev is a battery> AND ... */
-   fprintf ( stderr, "catch_upower_event_and_reset(): stub\n" );
-   catch_upower_event ( client, dev, globals );
+   const gchar* object_path;
+   struct script_config* pscript;
+   uint k;
+
+   object_path = up_device_get_object_path ( dev );
+
+   for ( k = 0; k < globals->scripts->len; k++ ) {
+      pscript = g_ptr_array_index ( globals->scripts, k );
+      if ( pscript->last_object_path == object_path ) {
+         reset_script_status ( pscript );
+      }
+   }
+
+   check_batteries ( client, globals );
 }
+
+extern void catch_upower_event_device_added (
+   UpClient* const client, UpDevice* const dev,
+   struct batwatch_globals* const globals
+) {
+   UpDeviceKind dev_type;
+   g_object_get ( dev, "kind", &dev_type, NULL );
+
+   if ( dev_type == UP_DEVICE_KIND_BATTERY ) {
+      handle_upower_battery_reset_event ( client, dev, globals );
+   }
+}
+
+extern void catch_upower_event_device_removed (
+   UpClient* const client, UpDevice* const dev,
+   struct batwatch_globals* const globals
+) {
+   UpDeviceKind dev_type;
+   g_object_get ( dev, "kind", &dev_type, NULL );
+
+   if ( dev_type == UP_DEVICE_KIND_BATTERY ) {
+      handle_upower_battery_reset_event ( client, dev, globals );
+   }
+}
+
 
 
 /*
@@ -166,6 +203,7 @@ extern void check_batteries (
                ( is_present && ( dev_state == UP_DEVICE_STATE_UNKNOWN ) )
             ) {
                pbat = create_battery_info (
+                  up_device_get_object_path ( dev ),
                   sysfs_path, percentage, dev_state, time_to_empty
                );
                log_battery_found ( pbat, "discharging" );
@@ -186,6 +224,7 @@ extern void check_batteries (
                   g_free ( fallback_battery );
                }
                fallback_battery = create_battery_info (
+                  up_device_get_object_path ( dev ),
                   sysfs_path, percentage, dev_state, time_to_full
                );
                log_battery_found ( fallback_battery, "fallback" );

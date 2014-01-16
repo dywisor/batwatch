@@ -202,15 +202,15 @@ static void main_run ( struct batwatch_globals* const globals ) {
    ) ) {
       g_signal_connect (
          globals->upower_client, "device-changed",
-         G_CALLBACK(catch_upower_event), (gpointer*) globals
+         G_CALLBACK(catch_upower_event_device_changed), (gpointer*) globals
       );
       g_signal_connect (
          globals->upower_client, "device-added",
-         G_CALLBACK(catch_upower_event_and_reset), (gpointer*) globals
+         G_CALLBACK(catch_upower_event_device_added), (gpointer*) globals
       );
       g_signal_connect (
          globals->upower_client, "device-removed",
-         G_CALLBACK(catch_upower_event_and_reset), (gpointer*) globals
+         G_CALLBACK(catch_upower_event_device_removed), (gpointer*) globals
       );
 
       g_signal_connect (

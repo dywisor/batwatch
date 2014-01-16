@@ -72,6 +72,7 @@ enum script_type {
 struct script_config {
    const gchar*     exe;
    const gchar*     battery_name;
+   const gchar*     last_object_path;
    gdouble          threshold_high;
    /* gdouble threshold_low; // not implemented */
    gdouble          percentage_last_run;
@@ -91,6 +92,7 @@ struct script_config {
 struct battery_info {
    const gchar*   name;
    const gchar*   sysfs_path;
+   const gchar*   object_path;
    gdouble        remaining_percent;
    /* either remaining running time or time until charged, in seconds(!) */
    gint64         time;
@@ -113,6 +115,7 @@ static inline struct script_config* create_script_config (
       .percentage_last_run = -1.0,
       .exe                 = exe,
       .battery_name        = battery_name,
+      .last_object_path    = NULL,
       .type                = type,
    };
 
@@ -120,6 +123,7 @@ static inline struct script_config* create_script_config (
 } ATTRIBUTE_WARN_UNUSED_RESULT
 
 static inline struct battery_info* create_battery_info (
+   const gchar* object_path,
    const gchar* sysfs_path,
    gdouble      remaining_percent,
    uint         state,
@@ -131,6 +135,7 @@ static inline struct battery_info* create_battery_info (
    *pbat = (struct battery_info) {
       .name              = basename ( (gchar*) sysfs_path ),
       .sysfs_path        = sysfs_path,
+      .object_path       = object_path,
       .remaining_percent = remaining_percent,
       .state             = state,
       .time              = time,
@@ -159,6 +164,7 @@ static inline gint compare_battery_status (
 static inline void reset_script_status (
    struct script_config* const pscript
 ) {
+   pscript->last_object_path    = NULL;
    pscript->percentage_last_run = -1.0;
 }
 
@@ -177,6 +183,7 @@ static inline gboolean script_check_has_been_run (
     *
     * Maybe remember last_state + timestamp/ticket
     */
+   /* FIXME: last_object_path */
    return ( pscript->percentage_last_run < 0.0 ) ? FALSE : TRUE;
 }
 
@@ -185,6 +192,7 @@ static inline void script_mark_as_run (
    const struct battery_info* const pbat
 ) {
    pscript->percentage_last_run = pbat->remaining_percent;
+   pscript->last_object_path    = pbat->object_path;
 }
 
 static inline gboolean percentage_in_critical_range (

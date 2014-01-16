@@ -24,12 +24,17 @@
 
 #include "globals.h"
 
-void catch_upower_event (
+void catch_upower_event_device_changed (
    UpClient* const client, UpDevice* const dev,
    struct batwatch_globals* const globals
 );
 
-void catch_upower_event_and_reset (
+void catch_upower_event_device_added (
+   UpClient* const client, UpDevice* const dev,
+   struct batwatch_globals* const globals
+);
+
+void catch_upower_event_device_removed (
    UpClient* const client, UpDevice* const dev,
    struct batwatch_globals* const globals
 );
