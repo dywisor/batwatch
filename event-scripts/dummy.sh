@@ -1,5 +1,5 @@
 #!/bin/sh
-RE_VARNAMES="((.+_)?BATTERY(_.+)?|PATH|HOME|DISPLAY|USER|LOGNAME|LANG|LC_ALL|PWD|TMPDIR|T)"
+RE_VARNAMES="((.+_)?BATTERY(_.+)?|(.+_)?AC_POWER|PATH|HOME|DISPLAY|USER|LOGNAME|LANG|LC_ALL|PWD|TMPDIR|T)"
 
 echo "--- batwatch dummy event script ---"
 if [ -n "$*" ]; then
