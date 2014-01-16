@@ -29,6 +29,18 @@ abort_if_fallback_battery() {
    fi
 }
 
+abort_if_on_ac_power() {
+   if [ "${ON_AC_POWER}" = "1" ]; then
+      dolog "${1:-${SCRIPT_NAME}} inhibited by AC power"
+      exit ${2:-0}
+   fi
+}
+
+abort_if_any_fallback_power() {
+   abort_if_on_ac_power
+   abort_if_fallback_battery
+}
+
 # run_command_logged ( action_description, *cmdv )
 run_command_logged() {
    : ${1?} ${2:?}
@@ -75,22 +87,22 @@ dolog "started" debug
 
 case "${SCRIPT_MODE}" in
    'suspend')
-      abort_if_fallback_battery suspend
+      abort_if_any_fallback_power suspend
       run_power_command suspend
    ;;
    'suspend-hybrid'|'hybrid-sleep')
-      abort_if_fallback_battery suspend-hybrid
+      abort_if_any_fallback_power suspend-hybrid
       run_power_command suspend-hybrid "" hybrid-sleep
    ;;
    'hibernate')
-      abort_if_fallback_battery hibernate
+      abort_if_any_fallback_power hibernate
       run_power_command hibernate
    ;;
    'power-action')
       die "This script needs to be (sym-)linked." 4
    ;;
    'poweroff'|'halt')
-      abort_if_fallback_battery poweroff
+      abort_if_any_fallback_power poweroff
       if is_systemd_booted; then
          run_systemctl_command poweroff
       else
@@ -99,7 +111,7 @@ case "${SCRIPT_MODE}" in
    ;;
    'reboot')
       # reboot on low battery doesn't make much sense
-      abort_if_fallback_battery reboot
+      abort_if_any_fallback_power reboot
       if is_systemd_booted; then
          run_systemctl_command reboot
       else
