@@ -25,10 +25,10 @@
 #include "globals.h"
 
 /*
- * minimal interval for calling check_batteries(), in us (10^-6) (per event!)
+ * minimal interval for calling check_batteries(), seconds (per event!)
  */
 #ifndef BW_EVENT_MIN_INTERVAL
-#define BW_EVENT_MIN_INTERVAL 10000.0
+#define BW_EVENT_MIN_INTERVAL 0.01
 #endif
 
 void catch_upower_event_device_changed (
