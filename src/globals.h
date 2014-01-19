@@ -38,14 +38,27 @@ enum {
 };
 */
 
+enum single_shot_mode {
+   SINGLE_SHOT_MODE_NULL = 0,
+   SINGLE_SHOT_MODE_ANY  = 1,
+
+   /*
+    * SINGLE_SHOT_MODE_ALL is not implemented
+    *
+    * this requires extra work ("freeze" scripts once executed)
+    */
+   SINGLE_SHOT_MODE_ALL  = 2,
+};
+
 
 struct batwatch_globals {
    /* GPtrArray<struct script_config*> */
    BatwatchSignalEmitter* signal_emitter;
    GPtrArray*     scripts;
-   gboolean       scripts_dirty;
+   guint          num_scripts_dirty;
    gboolean       is_daemon;
    gboolean       on_ac_power;
+   guint          single_shot;
    const gchar*   daemon_stdout_file;
    const gchar*   daemon_stderr_file;
    const gchar*   pidfile;
@@ -77,9 +90,10 @@ static inline void batwatch_init_globals (
    globals->signal_emitter          = batwatch_signal_emitter_new();
    g_object_ref ( globals->signal_emitter );
    globals->scripts                 = g_ptr_array_new();
-   globals->scripts_dirty           = FALSE;
+   globals->num_scripts_dirty       = 0;
    globals->is_daemon               = FALSE;
    globals->on_ac_power             = FALSE;
+   globals->single_shot             = SINGLE_SHOT_MODE_NULL;
    globals->daemon_stdout_file      = NULL;
    globals->daemon_stderr_file      = NULL;
    globals->pidfile                 = NULL;
@@ -142,7 +156,7 @@ static inline void batwatch_globals_reset_scripts (
    g_ptr_array_foreach (
       globals->scripts, (GFunc) reset_script_status, NULL
    );
-   globals->scripts_dirty = FALSE;
+   globals->num_scripts_dirty = 0;
 }
 
 static inline void batwatch_globals_sort_scripts (

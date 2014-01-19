@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <glib.h>
 #include <libupower-glib/upower.h>
+#include <signal.h>
 /* #include <syslog.h> */
 
 /* #includes<> probably not necessary */
@@ -48,20 +49,48 @@ static inline void log_battery_found (
    );
 }
 
+static void single_shot_mode_check_and_exit (
+   struct batwatch_globals* const globals
+) {
+   /* TODO/FIXME: setsid() childs in single shot mode? */
+
+   if ( globals->single_shot == SINGLE_SHOT_MODE_NULL ) {
+      return;
+
+   } else if (
+      ( globals->single_shot == SINGLE_SHOT_MODE_ANY ) &&
+      ( globals->num_scripts_dirty > 0 )
+   ) {
+      g_debug ( "exiting due to --single-shot any." );
+      raise ( SIGTERM );
+
+   } else if (
+      ( globals->single_shot == SINGLE_SHOT_MODE_ALL ) &&
+      ( globals->num_scripts_dirty == globals->scripts->len )
+   ) {
+      g_debug ( "exiting due to --single-shot all." );
+      raise ( SIGTERM );
+
+   } else {
+      g_error ( "unknown single shot mode!" );
+      /* ^ raises abort() */
+   }
+}
+
 /*
  * run_scripts_as_necessary()
  *
  * $$DESCRIPTION$$
  *
- * Returns TRUE if there is any script marked as "has been run" (whether
- * executed by this function call or a previous one), else FALSE.
- * This value gets also stored in globals->scripts_dirty.
+ * Returns the number of scripts marked as "has been run" (whether
+ * executed by this function call or a previous one).
+ * This number gets also stored in globals->num_scripts_dirty.
  *
  * Important:
  *  batteries_discharging and globals->scripts must be sorted before
  *  calling this function.
  */
-static gboolean run_scripts_as_necessary (
+static guint run_scripts_as_necessary (
    struct batwatch_globals* const globals,
    GPtrArray*               const batteries_discharging,
    struct battery_info*     const fallback_battery
@@ -312,9 +341,10 @@ extern void check_batteries (
          run_scripts_as_necessary (
             globals, batteries_discharging, fallback_battery
          );
+         single_shot_mode_check_and_exit ( globals );
 
-      } else if ( globals->scripts_dirty ) {
-         /* sets scripts_dirty */
+      } else if ( globals->num_scripts_dirty > 0 ) {
+         /* sets num_scripts_dirty */
          batwatch_globals_reset_scripts ( globals );
       }
 
@@ -332,9 +362,9 @@ extern void check_batteries (
  *
  * $$DESCRIPTION$$
  *
- * Returns TRUE if there is any script marked as "has been run" (whether
- * executed by this function call or a previous one), else FALSE.
- * This value gets also stored in globals->scripts_dirty.
+ * Returns the number of scripts marked as "has been run" (whether
+ * executed by this function call or a previous one).
+* This number gets also stored in globals->num_scripts_dirty.
  *
  * Important:
  *  batteries_discharging and globals->script smust be sorted before
@@ -346,13 +376,13 @@ extern void check_batteries (
  *  battery-related env vars.
  *
  */
-static gboolean run_scripts_as_necessary (
+static guint run_scripts_as_necessary (
    struct batwatch_globals* const globals,
    GPtrArray*               const batteries_discharging,
    struct battery_info*     const fallback_battery
 ) {
    guint                 k, j;
-   gboolean              any_script_dirty;
+   guint                 num_scripts_dirty;
    struct script_config* pscript;
    struct battery_info*  pbat;
    /* pointer to the battery for which env vars have been set */
@@ -378,10 +408,10 @@ static gboolean run_scripts_as_necessary (
     */
 
    /*
-    * any_script_dirty <=> have any script in globals->scripts
+    * num_scripts_dirty <=> number of scripts in globals->scripts
     *    where percentage_last_run >= 0.0
     */
-   any_script_dirty = FALSE;
+   num_scripts_dirty = 0;
 
    j       = 0;
    pbat    = g_ptr_array_index ( batteries_discharging, j );
@@ -427,7 +457,7 @@ static gboolean run_scripts_as_necessary (
             "script %s:%s has already been run.",
             pbat->name, pscript->exe
          );
-         any_script_dirty = TRUE;
+         num_scripts_dirty++;
 
       } else {
          /* run script */
@@ -451,7 +481,7 @@ static gboolean run_scripts_as_necessary (
          }
 
          run_script ( pscript, pbat, fallback_battery );
-         any_script_dirty = TRUE;
+         num_scripts_dirty++;
       }
    }
 
@@ -462,6 +492,6 @@ static gboolean run_scripts_as_necessary (
 
 
    /* done */
-   globals->scripts_dirty = any_script_dirty;
-   return any_script_dirty;
+   globals->num_scripts_dirty = num_scripts_dirty;
+   return num_scripts_dirty;
 }

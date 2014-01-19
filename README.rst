@@ -155,6 +155,9 @@ Options:
    Minimal energy (as percentage) a battery must have in order to be
    considered as fallback battery. Defaults to 30.0.
 
+-s, --single-shot
+   Exit after running any script.
+
 -h, --help
    Prints the help message to stdout and exits afterwards.
 

@@ -256,6 +256,7 @@ static void print_help_message (
          "options:\n"
          "  -F,                           minimal energy (as percentage) a battery must have\n"
          "  --fallback-min  <percentage>   in order to be considered as fallback battery [%.1f]\n"
+         "  -s, --single-shot             exit after executing any script\n"
          "  -h, --help                    print this message and exit\n"
          "  -V, --version                 print the version and exit\n"
          "\n"
@@ -279,6 +280,7 @@ int main ( const int argc, char* const* argv ) {
       { "exe",          required_argument, NULL, 'x' },
       { "battery",      required_argument, NULL, 'b' },
       { "fallback-min", required_argument, NULL, 'F' },
+      { "single-shot",  no_argument,       NULL, 's' },
       { "no-fork",      no_argument,       NULL, 'N' },
       { "stdout",       required_argument, NULL, '1' },
       { "stderr",       required_argument, NULL, '2' },
@@ -288,7 +290,7 @@ int main ( const int argc, char* const* argv ) {
       { "version",      no_argument,       NULL, 'V' },
       { NULL,           no_argument,       NULL,  0  }
    };
-   static const char* const short_options = "T:x:b:F:N1:2:C:p:hV";
+   static const char* const short_options = "T:x:b:F:sN1:2:C:p:hV";
 
    static const char* const syslog_ident  = "batwatch";
 
@@ -357,6 +359,10 @@ int main ( const int argc, char* const* argv ) {
                globals.exit_code = EX_USAGE;
                goto main_exit;
             }
+            break;
+
+         case 's':
+            globals.single_shot = SINGLE_SHOT_MODE_ANY;
             break;
 
          case 'N':

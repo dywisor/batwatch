@@ -3,8 +3,8 @@ Notes/Ideas/TODO, in no particular order:
 [ ] non-daemon mode behaves differently (no chdir, ...)
 [ ] see TODO note regarding state changes in data_types.h
 [ ] --threshold-low for scripts, this allows to handle events like "battery full"
-[ ] --single-shot: exit after any/all scripts have been run once
-[?] pass TimeToEmpty/TimeToFull to scripts
+[~] --single-shot: exit after any/all scripts have been run once
+[x] pass TimeToEmpty/TimeToFull to scripts
 [x] pass percentage, remaining running time,... as env vars
 [ ] detect suspend/resume etc. (--inhibit,-I)
      -- dbus, polkit/consolekit/logind?
