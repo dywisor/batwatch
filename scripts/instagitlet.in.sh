@@ -18,6 +18,7 @@
 #  --no-deps        -- don't check for build dependencies
 #  --no-compile     -- don't build batwatch
 #  --clean          -- clean up before building
+#  --no-clean       -- don't clean up before building
 #  --no-run         -- don't run batwatch
 #  -X, --just-run   -- same as --no-src --no-deps --no-compile
 #  --src-dir <dir>  -- set src directory
@@ -207,7 +208,7 @@ warn_inhibited_by_dry_run() { ewarn "${1}" '(dry-run)'; }
 want_depcheck=y
 want_src=y
 want_compile=y
-want_clean_compile=
+want_clean_compile=y
 want_rdepcheck=y
 want_run=y
 my_git_src_dir=
@@ -241,6 +242,9 @@ while [ ${#} -gt 0 ]; do
       '--clean')
          want_clean_compile=y
       ;;
+      '--no-clean')
+         want_clean_compile=
+      ;;
       '--no-run')
          want_run=
          want_rdepcheck=
@@ -272,6 +276,7 @@ Options:
   --no-deps        -- don't check for build dependencies
   --no-compile     -- don't build ${PN}
   --clean          -- clean up before building
+  --no-clean       -- don't clean up before building
   --no-run         -- don't run ${PN}
   -X, --just-run   -- same as --no-src --no-deps --no-compile
   --src-dir <dir>  -- set src directory
@@ -322,6 +327,8 @@ echo
 
 ### init env
 einfo "init env" ">>>"
+
+[ -z "${G_MESSAGES_DEBUG+SET}" ] || export G_MESSAGES_DEBUG
 
 if __faking__; then
    F_DEPCHECK=configure_which_nonfatal
