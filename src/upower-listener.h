@@ -28,7 +28,7 @@
  * minimal interval for calling check_batteries(), seconds (per event!)
  */
 #ifndef BW_EVENT_MIN_INTERVAL
-#define BW_EVENT_MIN_INTERVAL 1.15
+#define BW_EVENT_MIN_INTERVAL 2.0
 #endif
 
 void catch_upower_event_device_changed (
