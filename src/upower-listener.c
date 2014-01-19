@@ -38,7 +38,6 @@
 #include "run-script.h"
 #include "scriptenv.h"
 
-
 static inline void log_battery_found (
    const struct battery_info* const pbat,
    const char* const description
@@ -59,7 +58,7 @@ static inline void log_battery_found (
  * This value gets also stored in globals->scripts_dirty.
  *
  * Important:
- *  batteries_discharging and globals->script smust be sorted before
+ *  batteries_discharging and globals->scripts must be sorted before
  *  calling this function.
  */
 static gboolean run_scripts_as_necessary (
@@ -85,11 +84,23 @@ extern void catch_upower_event_device_changed (
    UpClient* const client, UpDevice* const dev,
    struct batwatch_globals* const globals
 ) {
+   static GTimer* ev_timer;
+
    UpDeviceKind dev_type;
    g_object_get ( dev, "kind", &dev_type, NULL );
 
    if ( dev_type == UP_DEVICE_KIND_BATTERY ) {
-      check_batteries ( client, globals );
+      if ( ev_timer == NULL ) {
+         ev_timer = g_timer_new();
+         check_batteries ( client, globals );
+      } else if (
+         g_timer_elapsed ( ev_timer, NULL ) > BW_EVENT_MIN_INTERVAL
+      ) {
+         g_timer_start ( ev_timer );
+         check_batteries ( client, globals );
+      } else {
+         g_debug ( "dropped device-changed event" );
+      }
    }
 }
 
@@ -125,11 +136,23 @@ extern void catch_upower_event_device_added (
    UpClient* const client, UpDevice* const dev,
    struct batwatch_globals* const globals
 ) {
+   static GTimer* ev_timer = NULL;
+
    UpDeviceKind dev_type;
    g_object_get ( dev, "kind", &dev_type, NULL );
 
    if ( dev_type == UP_DEVICE_KIND_BATTERY ) {
-      handle_upower_battery_reset_event ( client, dev, globals );
+      if ( ev_timer == NULL ) {
+         ev_timer = g_timer_new();
+         handle_upower_battery_reset_event ( client, dev, globals );
+      } else if (
+         g_timer_elapsed ( ev_timer, NULL ) > BW_EVENT_MIN_INTERVAL
+      ) {
+         g_timer_start ( ev_timer );
+         handle_upower_battery_reset_event ( client, dev, globals );
+      } else {
+         g_debug ( "dropped device-added event" );
+      }
    }
 }
 
@@ -137,11 +160,23 @@ extern void catch_upower_event_device_removed (
    UpClient* const client, UpDevice* const dev,
    struct batwatch_globals* const globals
 ) {
+   static GTimer* ev_timer = NULL;
+
    UpDeviceKind dev_type;
    g_object_get ( dev, "kind", &dev_type, NULL );
 
    if ( dev_type == UP_DEVICE_KIND_BATTERY ) {
-      handle_upower_battery_reset_event ( client, dev, globals );
+      if ( ev_timer == NULL ) {
+         ev_timer = g_timer_new();
+         handle_upower_battery_reset_event ( client, dev, globals );
+      } else if (
+         g_timer_elapsed ( ev_timer, NULL ) > BW_EVENT_MIN_INTERVAL
+      ) {
+         g_timer_start ( ev_timer );
+         handle_upower_battery_reset_event ( client, dev, globals );
+      } else {
+         g_debug ( "dropped device-removed event" );
+      }
    }
 }
 
