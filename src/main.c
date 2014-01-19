@@ -40,6 +40,7 @@
 #include <glib-object.h>
 #include <signal.h>
 #include <libupower-glib/upower.h>
+#include <syslog.h>
 
 #include "version.h"
 #include "gsignal_emitter.h"
@@ -289,6 +290,8 @@ int main ( const int argc, char* const* argv ) {
    };
    static const char* const short_options = "T:x:b:F:N1:2:C:p:hV";
 
+   static const char* const syslog_ident  = "batwatch";
+
    const char* const prog_name = basename(argv[0]);
    struct batwatch_globals globals;
    /* enum script_type script_type; */
@@ -418,7 +421,9 @@ int main ( const int argc, char* const* argv ) {
       if (
          daemonize ( &globals ) && batwatch_signal_setup ( &globals )
       ) {
+         openlog ( syslog_ident, LOG_PID, LOG_DAEMON );
          main_run ( &globals );
+         closelog();
       }
       /* else goto main_exit; */
 
@@ -434,7 +439,9 @@ int main ( const int argc, char* const* argv ) {
          /* goto main_exit; */
       } else {
          /* run */
+         openlog ( syslog_ident, LOG_PID|LOG_PERROR, LOG_DAEMON );
          main_run ( &globals );
+         closelog();
       }
    }
 

@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <glib.h>
 #include <libupower-glib/upower.h>
+/* #include <syslog.h> */
 
 /* #includes<> probably not necessary */
 #include <sys/types.h>
@@ -286,6 +287,8 @@ extern void check_batteries (
       g_ptr_array_unref ( batteries_discharging );
       g_ptr_array_unref ( devices );
    } /* end if devices */
+
+   g_debug  ( "check_batteries() done" );
 }
 
 

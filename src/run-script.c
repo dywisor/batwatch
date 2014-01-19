@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <sysexits.h>
 #include <glib.h>
+#include <syslog.h>
 
 #include "run-script.h"
 #include "data_types.h"
@@ -94,10 +95,15 @@ static uint run_script__blocking (
    const struct battery_info*  const fallback_battery
 ) {
    uint  retcode;
+   int   exec_errno;
 
    retcode = EXIT_FAILURE;
 
    /* if <check script type...> {...} */
+
+   syslog ( LOG_NOTICE, "running script %s for battery %s (type %#x)",
+      script->exe, battery->name, script->type
+   );
 
    if ( script->type == SCRIPT_TYPE_EXE_NO_ARGS ) {
       g_debug ( "running script %s for battery %s without args.",
@@ -106,7 +112,13 @@ static uint run_script__blocking (
 
       execlp ( script->exe, script->exe, NULL );
       /* exec should not return */
-      g_warning ( "exec %s failed: %s\n", script->exe, strerror ( errno ) );
+      exec_errno = errno;
+      g_warning ( "exec %s failed: %s\n",
+         script->exe, strerror ( exec_errno )
+      );
+      syslog ( LOG_ERR, "exec %s failed: %s",
+         script->exe, strerror ( exec_errno )
+      );
       retcode = EX_OSERR;
 
 /*
@@ -118,11 +130,20 @@ static uint run_script__blocking (
 
       execlp ( script->exe, script->exe, NULL );
       // exec should not return
-      g_warning ( "exec %s failed: %s\n", script->exe, strerror ( errno ) );
+      exec_errno = errno;
+      g_warning ( "exec %s failed: %s\n",
+         script->exe, strerror ( exec_errno )
+      );
+      syslog ( LOG_WARNING, "exec %s failed: %s",
+         script->exe, strerror ( exec_errno )
+      );
       retcode = EX_OSERR;
 */
    } else {
       g_warning ( "unknown script type %d\n", script->type );
+      syslog ( LOG_ERR, "%s: unknown script type %#x",
+         script->exe, script->type
+      );
    }
 
 

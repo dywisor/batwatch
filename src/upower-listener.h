@@ -44,6 +44,4 @@ void check_batteries (
    struct batwatch_globals* const globals
 );
 
-
-
 #endif
