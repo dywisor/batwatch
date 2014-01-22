@@ -2,7 +2,12 @@
 readonly SCRIPT_FILENAME="${0##*/}"
 readonly SCRIPT_NAME="${SCRIPT_FILENAME%.*}"
 readonly SCRIPT_MODE="${SCRIPT_NAME#*system[-_]}"
-readonly X_SUDO="/usr/bin/sudo -n -u root --"
+readonly X_SUDO="/usr/bin/sudo -n"
+if [ "$(id -u 2>/dev/null)x" = "0x" ]; then
+   readonly X_SUDO_ROOT=
+else
+   readonly X_SUDO_ROOT="${X_SUDO} -u root --"
+fi
 readonly X_SYSTEMCTL="systemctl"
 readonly X_PM_PREFIX="/usr/sbin/pm-"
 
@@ -24,14 +29,14 @@ have_fallback_battery() {
 
 abort_if_fallback_battery() {
    if have_fallback_battery; then
-      dolog "${1:-${SCRIPT_NAME}} inhibited by fallback battery ${FALLBACK_BATTERY:-X}"
+      dolog "${1-}${1:+ }inhibited by fallback battery ${FALLBACK_BATTERY:-X}"
       exit ${2:-0}
    fi
 }
 
 abort_if_on_ac_power() {
    if [ "${ON_AC_POWER}" = "1" ]; then
-      dolog "${1:-${SCRIPT_NAME}} inhibited by AC power"
+      dolog "${1-}${1:+ }inhibited by AC power"
       exit ${2:-0}
    fi
 }
