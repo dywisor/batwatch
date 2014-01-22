@@ -254,12 +254,13 @@ install-openrc:
 	install -d -m 0755 -- $(OPENRC_INIT_D) $(OPENRC_CONF_D)
 	install -m 0755 -- \
 		$(INITSCRIPT_DIR)/$(BATWATCH_NAME).openrc $(OPENRC_INIT_D)/$(BATWATCH_NAME)
-	install -m 0755 -- \
+	install -m 0644 -- \
 		$(INITSCRIPT_DIR)/$(BATWATCH_NAME).openrc.conf $(OPENRC_CONF_D)/$(BATWATCH_NAME)
 
 PHONY += uninstall-openrc
 uninstall-openrc:
 	$(call f_uninstall_file,$(OPENRC_INIT_D)/$(BATWATCH_NAME))
+	$(call f_uninstall_file,$(OPENRC_CONF_D)/$(BATWATCH_NAME))
 
 
 
