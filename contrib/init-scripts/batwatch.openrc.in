@@ -22,7 +22,7 @@ batwatch_prepare() {
    case "${BATWATCH_PIDFILE}" in
       */batwatch/?*)
          checkpath -d -m 0750 \
-            -o "${BATWATCH_USER:-root}.${BATWATCH_GROUP:-root}" \
+            -o "${BATWATCH_USER:-root}:${BATWATCH_GROUP:-root}" \
             "${BATWATCH_PIDFILE%/*}"
       ;;
    esac
