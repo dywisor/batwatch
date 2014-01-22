@@ -6,6 +6,9 @@ export LC_COLLATE LC_NUMERIC
 f_uninstall_file = \
 	if test -e $(1) || test -h $(1); then rm -v -- $(1); fi
 
+f_uninstall_dir = \
+	if test -d $(1); then rmdir -v --ignore-fail-on-non-empty -- $(1); fi
+
 f_which  = $(shell which $(1) 2>/dev/null)
 f_getver = $(shell \
 	$(X_EXTRACT_DEF) $(SRCDIR)/version.h BATWATCH_VERSION 2>/dev/null \
@@ -24,7 +27,8 @@ X_DASH := $(call f_which,dash)
 DESTDIR     :=
 BIN         := $(DESTDIR)/usr/bin
 SUDOERS_D   := $(DESTDIR)/etc/sudoers.d
-BASHCOMPDIR := $(DESTDIR)/usr/share/bash-completions/completions
+DATADIR     := $(DESTDIR)/usr/share
+BASHCOMPDIR := $(DATADIR)/bash-completions/completions
 
 OPENRC_INIT_D := $(DESTDIR)/etc/init.d
 OPENRC_CONF_D := $(DESTDIR)/etc/conf.d
@@ -56,6 +60,7 @@ SRCDIR         := $(CURDIR)/src
 DISTDIR        := $(CURDIR)/dist
 CONTRIB_DIR    := $(CURDIR)/contrib
 INITSCRIPT_DIR := $(CONTRIB_DIR)/init-scripts
+EVSCRIPT_DIR   := $(CURDIR)/event-scripts
 
 COMMON_OBJECTS := $(addprefix $(O)/,\
 	globals.o daemonize.o scriptenv.o run-script.o upower-listener.o gsignal_emitter.o)
@@ -64,6 +69,8 @@ COMMON_HEADERS := $(addprefix $(SRCDIR)/,\
 
 BATWATCH_OBJECTS := $(addprefix $(O)/,main.o)
 BATWATCH_NAME    := batwatch
+
+_EVSCRIPT_DEST   := $(DATADIR)/$(BATWATCH_NAME)/event-scripts
 
 _LAZY_UPOWER_FLAGS := $(shell $(PKG_CONFIG) --cflags --libs upower-glib)
 
@@ -196,6 +203,21 @@ uninstall:
 	$(call f_uninstall_file,$(BIN)/$(BATWATCH_NAME))
 
 
+PHONY += install-scripts
+install-scripts:
+	install -d -m 0755 -- $(_EVSCRIPT_DEST)
+	install -m 0755 -t $(_EVSCRIPT_DEST) -- $(wildcard $(EVSCRIPT_DIR)/*.sh)
+	ln -fs -- system-power-action.sh $(_EVSCRIPT_DEST)/system-suspend.sh
+	ln -fs -- system-power-action.sh $(_EVSCRIPT_DEST)/system-suspend-hybrid.sh
+	ln -fs -- system-power-action.sh $(_EVSCRIPT_DEST)/system-hibernate.sh
+	ln -fs -- system-power-action.sh $(_EVSCRIPT_DEST)/system-poweroff.sh
+#	ln -fs -- system-power-action.sh $(_EVSCRIPT_DEST)/system-reboot.sh
+
+PHONY += uninstall-scripts
+uninstall-scripts:
+	rm -vf -- $(wildcard $(_EVSCRIPT_DEST)/*.sh)
+	$(call f_uninstall_dir_rec,$(_EVSCRIPT_DEST))
+
 
 PHONY += install-contrib
 install-contrib: $(CONTRIB_DIR)/$(BATWATCH_NAME).sudoers
@@ -229,9 +251,11 @@ uninstall-sysvinit:
 
 PHONY += install-openrc
 install-openrc:
-	install -d -m 0755 -- $(OPENRC_INIT_D)
+	install -d -m 0755 -- $(OPENRC_INIT_D) $(OPENRC_CONF_D)
 	install -m 0755 -- \
 		$(INITSCRIPT_DIR)/$(BATWATCH_NAME).openrc $(OPENRC_INIT_D)/$(BATWATCH_NAME)
+	install -m 0755 -- \
+		$(INITSCRIPT_DIR)/$(BATWATCH_NAME).openrc.conf $(OPENRC_CONF_D)/$(BATWATCH_NAME)
 
 PHONY += uninstall-openrc
 uninstall-openrc:
@@ -291,6 +315,8 @@ else
 	@echo  '                       (default: $(DESTDIR))'
 endif
 	@echo  '- uninstall          -'
+	@echo  '+ install-scripts    - Install event scripts to DATADIR/$(BATWATCH_NAME)/event-scripts'
+	@echo  '- uninstall-scripts  - (default: $(_EVSCRIPT_DEST))'
 	@echo  '+ install-contrib    - Install non-essential files to DESTDIR'
 	@echo  '                       * sudo config to SUDOERS_D'
 	@echo  '                         (default: $(SUDOERS_D))'
