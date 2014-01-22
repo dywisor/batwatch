@@ -51,11 +51,30 @@ EOF
 
 print_STOP() { echo "${1}do_stop"; }
 
+print_F_EXE_CHECK() {
+cat << EOF
+${1}@@EXE_CHECK@@() {
+${1}   set -- \${BATWATCH_OPTS-}
+${1}   while [ \${#} -gt 0 ]; do
+${1}      case "\${1}" in
+${1}         '-x'|'--exe')
+${1}            [ -z "\${2-}" ] || return 0
+${1}         ;;
+${1}      esac
+${1}      shift
+${1}   done
+${1}   return 1
+${1}}
+EOF
+}
+
 print_FUNCS() {
    local s="${1}   "
 
+   print_F_EXE_CHECK "${1}"
 
 cat << EOF
+
 ${1}@@START@@() {
 $(print_START_CODE "${s}")
 ${1}}
@@ -127,4 +146,5 @@ done | sed \
    -e "$(x RELOAD_ARGS --signal HUP)" \
    -e "$(x GET_STATUS_ARGS --test --quiet)" \
    -e "$(x CHECK_BINARY_MISSING "[ ! -x \"\${BATWATCH_BINARY}\" ]")" \
+   -e "$(x EXE_CHECK batwatch_check_exe_arg)" \
    -e "$(x BINARY "\${BATWATCH_BINARY}" )"

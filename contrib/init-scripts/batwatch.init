@@ -35,6 +35,19 @@ if [ -n "${BATWATCH_GROUP}" ]; then
    MY_SSD_OPTS="${MY_SSD_OPTS-} -g ${BATWATCH_GROUP}"
 fi
 
+batwatch_check_exe_arg() {
+   set -- ${BATWATCH_OPTS-}
+   while [ ${#} -gt 0 ]; do
+      case "${1}" in
+         '-x'|'--exe')
+            [ -z "${2-}" ] || return 0
+         ;;
+      esac
+      shift
+   done
+   return 1
+}
+
 do_start() {
    start-stop-daemon --start --exec "${BATWATCH_BINARY}" \
       --pidfile "${BATWATCH_PIDFILE}" ${MY_SSD_OPTS-} -- \
@@ -55,6 +68,53 @@ get_status() {
    do_stop --test--quiet
 }
 
+batwatch_create_svcdir() {
+   local o="${BATWATCH_USER-}:${BATWATCH_GROUP-}"
+
+   if [ ! -d "${1}" ]; then
+      case "${1}" in
+         ?*/?*)
+            if [ -d "${1%/*}" ]; then
+               true
+            elif ! mkdir -p -m 0755 -- "${1%/*}"; then
+               echo "Failed to create directory ${1%/*}"
+               return 10
+            fi
+         ;;
+      esac
+      if ! mkdir -p -m 0750 -- "${1}"; then
+         echo "Failed to create directory ${1}"
+         return 11
+      fi
+   fi
+
+   if [ -n "${o#:}" ]; then
+      if ! chown "${o}" "${1}"; then
+         echo "Failed to change ownership for ${1} to ${o}"
+         return 2
+      fi
+   fi
+
+   return 0
+}
+
+batwatch_prepare() {
+   local d
+
+   if ! batwatch_check_exe_arg; then
+      echo "At least on --exe must be specified in \$BATWATCH_OPTS."
+      return 1
+   fi
+
+   case "${BATWATCH_PIDFILE-}" in
+      */batwatch/?*)
+         batwatch_create_svcdir "${BATWATCH_PIDFILE%/*}" || return
+      ;;
+   esac
+
+   return 0
+}
+
 if [ ! -x "${BATWATCH_BINARY}" ]; then
    log_failure_message "${BATWATCH_BINARY} not found."
    exit 5
@@ -63,7 +123,7 @@ fi
 case "${1-}" in
    'start')
       log_action_msg "Starting batwatch"
-      if do_start; then
+      if batwatch_prepare && do_start; then
          log_success_msg "Started batwatch."
          exit 0
       else
@@ -82,7 +142,10 @@ case "${1-}" in
    ;;
    'restart')
       log_action_msg "Restarting batwatch"
-      if ! do_stop; then
+      if ! batwatch_prepare; then
+         log_failure_message "Failed to restart batwatch."
+         exit 1
+      elif ! do_stop; then
          log_warning_msg "Failed to stop batwatch."
       fi
 
@@ -104,7 +167,7 @@ case "${1-}" in
    ;;
    'reload'|'force-reload')
       log_action_msg "Reloading batwatch"
-      if do_reload; then
+      if batwatch_prepare && do_reload; then
          log_success_msg "Reloaded batwatch."
          exit 0
       else

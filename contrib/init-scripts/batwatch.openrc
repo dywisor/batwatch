@@ -32,7 +32,25 @@ depend() {
    after netmount nfsmount
 }
 
+batwatch_check_exe_arg() {
+   set -- ${BATWATCH_OPTS-}
+   while [ ${#} -gt 0 ]; do
+      case "${1}" in
+         '-x'|'--exe')
+            [ -z "${2-}" ] || return 0
+         ;;
+      esac
+      shift
+   done
+   return 1
+}
+
 batwatch_prepare() {
+   if ! batwatch_check_exe_arg; then
+      eerror "At least one --exe must be specified in \$BATWATCH_OPTS"
+      return 4
+   fi
+
    case "${BATWATCH_PIDFILE}" in
       */batwatch/?*)
          checkpath -d -m 0750 \

@@ -23,6 +23,53 @@
 
 @@FUNCS@@
 
+batwatch_create_svcdir() {
+   local o="${BATWATCH_USER-}:${BATWATCH_GROUP-}"
+
+   if [ ! -d "${1}" ]; then
+      case "${1}" in
+         ?*/?*)
+            if [ -d "${1%/*}" ]; then
+               true
+            elif ! mkdir -p -m 0755 -- "${1%/*}"; then
+               echo "Failed to create directory ${1%/*}"
+               return 10
+            fi
+         ;;
+      esac
+      if ! mkdir -p -m 0750 -- "${1}"; then
+         echo "Failed to create directory ${1}"
+         return 11
+      fi
+   fi
+
+   if [ -n "${o#:}" ]; then
+      if ! chown "${o}" "${1}"; then
+         echo "Failed to change ownership for ${1} to ${o}"
+         return 2
+      fi
+   fi
+
+   return 0
+}
+
+batwatch_prepare() {
+   local d
+
+   if ! @@EXE_CHECK@@; then
+      echo "At least on --exe must be specified in \$BATWATCH_OPTS."
+      return 1
+   fi
+
+   case "${BATWATCH_PIDFILE-}" in
+      */batwatch/?*)
+         batwatch_create_svcdir "${BATWATCH_PIDFILE%/*}" || return
+      ;;
+   esac
+
+   return 0
+}
+
 if @@CHECK_BINARY_MISSING@@; then
    log_failure_message "@@BINARY@@ not found."
    exit 5
@@ -31,7 +78,7 @@ fi
 case "${1-}" in
    'start')
       log_action_msg "Starting @@SVCNAME@@"
-      if @@START@@; then
+      if batwatch_prepare && @@START@@; then
          log_success_msg "Started @@SVCNAME@@."
          exit 0
       else
@@ -50,7 +97,10 @@ case "${1-}" in
    ;;
    'restart')
       log_action_msg "Restarting @@SVCNAME@@"
-      if ! @@STOP@@; then
+      if ! batwatch_prepare; then
+         log_failure_message "Failed to restart @@SVCNAME@@."
+         exit 1
+      elif ! @@STOP@@; then
          log_warning_msg "Failed to stop @@SVCNAME@@."
       fi
 
@@ -72,7 +122,7 @@ case "${1-}" in
    ;;
    'reload'|'force-reload')
       log_action_msg "Reloading @@SVCNAME@@"
-      if @@RELOAD@@; then
+      if batwatch_prepare && @@RELOAD@@; then
          log_success_msg "Reloaded @@SVCNAME@@."
          exit 0
       else

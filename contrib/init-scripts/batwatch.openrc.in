@@ -18,7 +18,14 @@ depend() {
    after netmount nfsmount
 }
 
+@@F_EXE_CHECK@@
+
 batwatch_prepare() {
+   if ! @@EXE_CHECK@@; then
+      eerror "At least one --exe must be specified in \$BATWATCH_OPTS"
+      return 4
+   fi
+
    case "${BATWATCH_PIDFILE}" in
       */batwatch/?*)
          checkpath -d -m 0750 \
