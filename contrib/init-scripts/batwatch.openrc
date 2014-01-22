@@ -10,7 +10,7 @@
 extra_started_commands="reload"
 description_reload="forcefully update batteries"
 
-: ${BATWACH_PIDFILE:=/run/BATWACH.pid}
+: ${BATWACH_PIDFILE:=/run/batwatch.pid}
 : ${BATWACH_BINARY:=/usr/bin/batwatch}
 : ${BATWACH_RUNDIR:=/}
 : ${BATWACH_OPTS=}
