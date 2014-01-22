@@ -89,10 +89,10 @@ PHONY += all
 all: $(BATWATCH_NAME)
 
 PHONY += install-all
-install-all: install install-contrib
+install-all: install install-contrib install-scripts
 
 PHONY += uninstall-all
-uninstall-all: uninstall uninstall-contrib
+uninstall-all: uninstall uninstall-contrib uninstall-scripts
 
 PHONY += regen
 regen: gen-instagit init-scripts
