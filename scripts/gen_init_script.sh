@@ -14,7 +14,7 @@ die() {
 
 print_VARS() {
 cat << EOF
-${1}: \${BATWATCH_PIDFILE:=/run/batwatch.pid}
+${1}: \${BATWATCH_PIDFILE:=/run/batwatch/batwatch.pid}
 ${1}: \${BATWATCH_BINARY:=/usr/bin/batwatch}
 ${1}: \${BATWATCH_RUNDIR:=/}
 ${1}: \${BATWATCH_OPTS=}

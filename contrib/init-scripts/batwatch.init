@@ -19,7 +19,7 @@
 # Description:         control the batwatch daemon
 ### END INIT INFO
 
-: ${BATWATCH_PIDFILE:=/run/batwatch.pid}
+: ${BATWATCH_PIDFILE:=/run/batwatch/batwatch.pid}
 : ${BATWATCH_BINARY:=/usr/bin/batwatch}
 : ${BATWATCH_RUNDIR:=/}
 : ${BATWATCH_OPTS=}

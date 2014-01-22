@@ -18,11 +18,29 @@ depend() {
    after netmount nfsmount
 }
 
+batwatch_prepare() {
+   case "${BATWATCH_PIDFILE}" in
+      */batwatch/?*)
+         checkpath -d -m 0750 \
+            -o "${BATWATCH_USER:-root}.${BATWATCH_GROUP:-root}" \
+            "${BATWATCH_PIDFILE%/*}"
+      ;;
+   esac
+}
+
 @@STOP@@() {
    @@STOP_CODE@@
 }
 
 start() {
+   case "${RC_CMD}" in
+      reload)
+         true
+      ;;
+      *)
+         batwatch_prepare || return 1
+      ;;
+   esac
    ebegin "Starting ${RC_SVCNAME}"
    @@START_CODE@@
    eend ${?}
@@ -35,6 +53,7 @@ stop() {
 }
 
 reload() {
+   batwatch_prepare || return 1
    ebegin "Reloading ${RC_SVNAME}"
    @@STOP@@ @@RELOAD_ARGS@@
    eend ${?}

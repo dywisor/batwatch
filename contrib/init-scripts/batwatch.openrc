@@ -10,7 +10,7 @@
 extra_started_commands="reload"
 description_reload="forcefully update batteries"
 
-: ${BATWATCH_PIDFILE:=/run/batwatch.pid}
+: ${BATWATCH_PIDFILE:=/run/batwatch/batwatch.pid}
 : ${BATWATCH_BINARY:=/usr/bin/batwatch}
 : ${BATWATCH_RUNDIR:=/}
 : ${BATWATCH_OPTS=}
@@ -32,12 +32,30 @@ depend() {
    after netmount nfsmount
 }
 
+batwatch_prepare() {
+   case "${BATWATCH_PIDFILE}" in
+      */batwatch/?*)
+         checkpath -d -m 0750 \
+            -o "${BATWATCH_USER:-root}.${BATWATCH_GROUP:-root}" \
+            "${BATWATCH_PIDFILE%/*}"
+      ;;
+   esac
+}
+
 do_stop() {
    start-stop-daemon --stop --exec "${BATWATCH_BINARY}" \
       --pidfile "${BATWATCH_PIDFILE}" ${MY_SSD_OPTS-} "$@"
 }
 
 start() {
+   case "${RC_CMD}" in
+      reload)
+         true
+      ;;
+      *)
+         batwatch_prepare || return 1
+      ;;
+   esac
    ebegin "Starting ${RC_SVCNAME}"
    start-stop-daemon --start --exec "${BATWATCH_BINARY}" \
       --pidfile "${BATWATCH_PIDFILE}" ${MY_SSD_OPTS-} -- \
@@ -53,6 +71,7 @@ stop() {
 }
 
 reload() {
+   batwatch_prepare || return 1
    ebegin "Reloading ${RC_SVNAME}"
    do_stop --signalHUP
    eend ${?}
