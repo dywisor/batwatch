@@ -10,20 +10,20 @@
 extra_started_commands="reload"
 description_reload="forcefully update batteries"
 
-: ${BATWACH_PIDFILE:=/run/batwatch.pid}
-: ${BATWACH_BINARY:=/usr/bin/batwatch}
-: ${BATWACH_RUNDIR:=/}
-: ${BATWACH_OPTS=}
-: ${BATWACH_USER=}
-: ${BATWACH_GROUP=}
+: ${BATWATCH_PIDFILE:=/run/batwatch.pid}
+: ${BATWATCH_BINARY:=/usr/bin/batwatch}
+: ${BATWATCH_RUNDIR:=/}
+: ${BATWATCH_OPTS=}
+: ${BATWATCH_USER=}
+: ${BATWATCH_GROUP=}
 
 : ${MY_SSD_OPTS=}
-if [ -n "${BATWACH_USER}" ]; then
-   MY_SSD_OPTS="${MY_SSD_OPTS-} -u ${BATWACH_USER}"
+if [ -n "${BATWATCH_USER}" ]; then
+   MY_SSD_OPTS="${MY_SSD_OPTS-} -u ${BATWATCH_USER}"
 fi
 
-if [ -n "${BATWACH_GROUP}" ]; then
-   MY_SSD_OPTS="${MY_SSD_OPTS-} -g ${BATWACH_GROUP}"
+if [ -n "${BATWATCH_GROUP}" ]; then
+   MY_SSD_OPTS="${MY_SSD_OPTS-} -g ${BATWATCH_GROUP}"
 fi
 
 depend() {
@@ -33,16 +33,16 @@ depend() {
 }
 
 do_stop() {
-   start-stop-daemon --stop --exec "${BATWACH_BINARY}" \
-      --pidfile "${BATWACH_PIDFILE}" ${MY_SSD_OPTS-} "$@"
+   start-stop-daemon --stop --exec "${BATWATCH_BINARY}" \
+      --pidfile "${BATWATCH_PIDFILE}" ${MY_SSD_OPTS-} "$@"
 }
 
 start() {
    ebegin "Starting ${RC_SVCNAME}"
-   start-stop-daemon --start --exec "${BATWACH_BINARY}" \
-      --pidfile "${BATWACH_PIDFILE}" ${MY_SSD_OPTS-} -- \
-      -p "${BATWACH_PIDFILE}" -C "${BATWACH_RUNDIR}" \
-      ${BATWACH_OPTS-}
+   start-stop-daemon --start --exec "${BATWATCH_BINARY}" \
+      --pidfile "${BATWATCH_PIDFILE}" ${MY_SSD_OPTS-} -- \
+      -p "${BATWATCH_PIDFILE}" -C "${BATWATCH_RUNDIR}" \
+      ${BATWATCH_OPTS-}
    eend ${?}
 }
 

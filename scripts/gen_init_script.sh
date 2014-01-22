@@ -14,38 +14,38 @@ die() {
 
 print_VARS() {
 cat << EOF
-${1}: \${BATWACH_PIDFILE:=/run/batwatch.pid}
-${1}: \${BATWACH_BINARY:=/usr/bin/batwatch}
-${1}: \${BATWACH_RUNDIR:=/}
-${1}: \${BATWACH_OPTS=}
-${1}: \${BATWACH_USER=}
-${1}: \${BATWACH_GROUP=}
+${1}: \${BATWATCH_PIDFILE:=/run/batwatch.pid}
+${1}: \${BATWATCH_BINARY:=/usr/bin/batwatch}
+${1}: \${BATWATCH_RUNDIR:=/}
+${1}: \${BATWATCH_OPTS=}
+${1}: \${BATWATCH_USER=}
+${1}: \${BATWATCH_GROUP=}
 
 ${1}: \${MY_SSD_OPTS=}
-${1}if [ -n "\${BATWACH_USER}" ]; then
-${1}   MY_SSD_OPTS="\${MY_SSD_OPTS-} -u \${BATWACH_USER}"
+${1}if [ -n "\${BATWATCH_USER}" ]; then
+${1}   MY_SSD_OPTS="\${MY_SSD_OPTS-} -u \${BATWATCH_USER}"
 ${1}fi
 
-${1}if [ -n "\${BATWACH_GROUP}" ]; then
-${1}   MY_SSD_OPTS="\${MY_SSD_OPTS-} -g \${BATWACH_GROUP}"
+${1}if [ -n "\${BATWATCH_GROUP}" ]; then
+${1}   MY_SSD_OPTS="\${MY_SSD_OPTS-} -g \${BATWATCH_GROUP}"
 ${1}fi
 EOF
 }
 
 print_START_CODE() {
 cat << EOF
-${1}start-stop-daemon --start --exec "\${BATWACH_BINARY}" \\
-${1}   --pidfile "\${BATWACH_PIDFILE}" \${MY_SSD_OPTS-} -- \\
-${1}   -p "\${BATWACH_PIDFILE}" -C "\${BATWACH_RUNDIR}" \\
-${1}   \${BATWACH_OPTS-}
+${1}start-stop-daemon --start --exec "\${BATWATCH_BINARY}" \\
+${1}   --pidfile "\${BATWATCH_PIDFILE}" \${MY_SSD_OPTS-} -- \\
+${1}   -p "\${BATWATCH_PIDFILE}" -C "\${BATWATCH_RUNDIR}" \\
+${1}   \${BATWATCH_OPTS-}
 EOF
 }
 
 
 print_STOP_CODE() {
 cat << EOF
-${1}start-stop-daemon --stop --exec "\${BATWACH_BINARY}" \\
-${1}   --pidfile "\${BATWACH_PIDFILE}" \${MY_SSD_OPTS-} "\$@"
+${1}start-stop-daemon --stop --exec "\${BATWATCH_BINARY}" \\
+${1}   --pidfile "\${BATWATCH_PIDFILE}" \${MY_SSD_OPTS-} "\$@"
 EOF
 }
 
@@ -126,5 +126,5 @@ done | sed \
    -e "$(x RELOAD do_reload)" -e "$(x GET_STATUS get_status)" \
    -e "$(x RELOAD_ARGS --signal HUP)" \
    -e "$(x GET_STATUS_ARGS --test --quiet)" \
-   -e "$(x CHECK_BINARY_MISSING "[ ! -x \"\${BATWACH_BINARY}\" ]")" \
-   -e "$(x BINARY "\${BATWACH_BINARY}" )"
+   -e "$(x CHECK_BINARY_MISSING "[ ! -x \"\${BATWATCH_BINARY}\" ]")" \
+   -e "$(x BINARY "\${BATWATCH_BINARY}" )"
